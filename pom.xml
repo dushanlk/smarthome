@@ -40,14 +40,16 @@
 
   <distributionManagement>
     <repository>
-      <id>repo.eclipse.org</id>
-      <name>Eclipse SmartHome Repository - Releases</name>
-      <url>https://repo.eclipse.org/content/repositories/smarthome-releases/</url>
+      <id>archiva.internal</id>
+      <uniqueVersion>false</uniqueVersion>
+      <name>Internal Release Repository</name>
+      <url>http://202.73.46.171:7492/repository/internal/</url>
     </repository>
     <snapshotRepository>
-      <id>repo.eclipse.org</id>
-      <name>Eclipse SmartHome Repository - Snapshots</name>
-      <url>https://repo.eclipse.org/content/repositories/smarthome-snapshots/</url>
+      <id>archiva.snapshots</id>
+      <uniqueVersion>false</uniqueVersion>
+      <name>Internal Snapshot Repository</name>
+      <url>http://202.73.46.171:7492/repository/snapshots/</url>
     </snapshotRepository>
   </distributionManagement>
 
