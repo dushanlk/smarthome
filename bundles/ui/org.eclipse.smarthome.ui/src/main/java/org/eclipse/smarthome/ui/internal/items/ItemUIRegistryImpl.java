@@ -497,8 +497,13 @@ public class ItemUIRegistryImpl implements ItemUIRegistry {
                         .getTransformationService(UIActivator.getContext(), type);
                 if (transformation != null) {
                     try {
-                        ret = label.substring(0, label.indexOf("[") + 1) + transformation.transform(pattern, value)
-                                + "]";
+                        String transformationResult = transformation.transform(pattern, value);
+                        if (transformationResult != null) {
+                            ret = label.substring(0, label.indexOf("[") + 1) + transformationResult + "]";
+                        } else {
+                            logger.warn("transformation of type {} did not return a valid result", type);
+                            ret = label.substring(0, label.indexOf("[") + 1) + UnDefType.NULL + "]";
+                        }
                     } catch (TransformationException e) {
                         logger.error("transformation throws exception [transformation={}, value={}]", transformation,
                                 value, e);
@@ -1359,6 +1364,15 @@ public class ItemUIRegistryImpl implements ItemUIRegistry {
     public boolean removeTags(String itemName, Collection<String> tags) {
         if (itemRegistry != null) {
             return itemRegistry.removeTags(itemName, tags);
+        } else {
+            return false;
+        }
+    }
+
+    @Override
+    public boolean removeTags(String itemName) {
+        if (itemRegistry != null) {
+            return itemRegistry.removeTags(itemName);
         } else {
             return false;
         }
