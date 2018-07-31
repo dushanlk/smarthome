@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<?pde version="3.8"?><target name="SmartHome" sequenceNumber="126">
+<?pde version="3.8"?><target name="SmartHome" sequenceNumber="129">
 <locations>
 <location includeAllPlatforms="false" includeConfigurePhase="false" includeMode="planner" includeSource="true" type="InstallableUnit">
 <unit id="com.google.inject" version="3.0.0.v201312141243"/>
@@ -36,8 +36,6 @@
 <unit id="org.apache.commons.collections" version="3.2.0.v2013030210310"/>
 <unit id="org.apache.commons.io" version="2.2.0.v201405211200"/>
 <unit id="org.apache.commons.io.source" version="2.2.0.v201405211200"/>
-<unit id="org.apache.commons.net" version="3.2.0.v201305141515"/>
-<unit id="org.apache.commons.net.source" version="3.2.0.v201305141515"/>
 <unit id="org.apache.commons.lang.source" version="2.6.0.v201404270220"/>
 <unit id="org.apache.commons.lang" version="2.6.0.v201404270220"/>
 <unit id="org.codehaus.jackson.core" version="1.6.0.v20101005-0925"/>
@@ -107,7 +105,7 @@
 </location>
 <location includeAllPlatforms="false" includeConfigurePhase="false" includeMode="planner" includeSource="true" type="InstallableUnit">
 <unit id="org.jupnp.feature.feature.group" version="0.0.0"/>
-<repository location="http://www.jupnp.org/update-site/2.3.0"/>
+<repository location="http://www.jupnp.org/update-site/2.4.0"/>
 </location>
 <location includeAllPlatforms="false" includeConfigurePhase="false" includeMode="planner" includeSource="true" type="InstallableUnit">
 <unit id="com.eclipsesource.jaxrs.provider.security.feature.source.feature.group" version="0.0.0"/>
@@ -131,6 +129,8 @@
 <unit id="net.minidev.accessors-smart.source" version="0.0.0"/>
 <unit id="com.jayway.jsonpath.json-path" version="0.0.0"/>
 <unit id="com.jayway.jsonpath.json-path.source" version="0.0.0"/>
+<unit id="org.apache.commons.net" version="3.3.0"/>
+<unit id="org.apache.commons.net.source" version="3.3.0"/>
 <unit id="org.mapdb.mapdb" version="0.0.0"/>
 <unit id="org.mapdb.mapdb.source" version="0.0.0"/>
 <unit id="net.minidev.json-smart" version="0.0.0"/>
@@ -189,8 +189,8 @@
 <repository location="http://download.eclipse.org/jetty/updates/jetty-bundles-9.x/9.3.15.v20161220"/>
 </location>
 <location includeAllPlatforms="false" includeConfigurePhase="false" includeMode="planner" includeSource="true" type="InstallableUnit">
-<unit id="nrjavaserial.feature.group" version="3.12.0"/>
-<repository location="http://dl.bintray.com/openhab/p2/nrjavaserial/3.12.0/"/>
+<unit id="com.neuronrobotics.nrjavaserial" version="0.0.0"/>
+<repository location="https://dl.bintray.com/openhab/p2/openhab-deps-repo/1.0.28"/>
 </location>
 <location path="${project_loc:targetplatform}/third-party" type="Directory"/>
 </locations>

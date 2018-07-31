@@ -46,6 +46,13 @@
          unpack="false"/>
 
    <plugin
+         id="org.eclipse.smarthome.binding.bluetooth.bluegiga"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"
+         unpack="false"/>
+
+   <plugin
          id="org.eclipse.smarthome.binding.bluetooth.bluez"
          download-size="0"
          install-size="0"
@@ -67,14 +74,21 @@
          unpack="false"/>
 
    <plugin
-         id="org.eclipse.smarthome.binding.hue"
+         id="org.eclipse.smarthome.binding.fsinternetradio"
          download-size="0"
          install-size="0"
          version="0.0.0"
          unpack="false"/>
 
    <plugin
-         id="org.eclipse.smarthome.binding.fsinternetradio"
+         id="org.eclipse.smarthome.binding.homematic"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"
+         unpack="false"/>
+
+   <plugin
+         id="org.eclipse.smarthome.binding.hue"
          download-size="0"
          install-size="0"
          version="0.0.0"
@@ -89,6 +103,13 @@
 
    <plugin
          id="org.eclipse.smarthome.binding.lirc"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"
+         unpack="false"/>
+
+   <plugin
+         id="org.eclipse.smarthome.binding.mqtt"
          download-size="0"
          install-size="0"
          version="0.0.0"

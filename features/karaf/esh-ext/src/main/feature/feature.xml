@@ -25,6 +25,13 @@
     <bundle>mvn:org.eclipse.smarthome.binding/org.eclipse.smarthome.binding.bluetooth/${project.version}</bundle>
   </feature>
 
+  <feature name="esh-binding-bluetooth-bluegiga" version="${project.version}">
+    <feature>esh-base</feature>
+    <feature>esh-binding-bluetooth</feature>
+    <feature>esh-io-transport-serial</feature>
+    <bundle>mvn:org.eclipse.smarthome.binding/org.eclipse.smarthome.binding.bluetooth.bluegiga/${project.version}</bundle>
+  </feature>
+
   <feature name="esh-binding-bluetooth-bluez" version="${project.version}">
     <feature>esh-base</feature>
     <feature>esh-binding-bluetooth</feature>
@@ -39,6 +46,7 @@
 
   <feature name="esh-binding-bosesoundtouch" version="${project.version}">
     <feature>esh-base</feature>
+    <feature>esh-io-transport-http</feature>
     <feature>esh-io-transport-mdns</feature>
     <bundle>mvn:org.eclipse.smarthome.binding/org.eclipse.smarthome.binding.bosesoundtouch/${project.version}</bundle>
   </feature>
@@ -54,16 +62,22 @@
     <bundle>mvn:org.eclipse.smarthome.binding/org.eclipse.smarthome.binding.dmx/${project.version}</bundle>
   </feature>
 
-  <feature name="esh-binding-hue" version="${project.version}">
-    <feature>esh-base</feature>
-    <feature>esh-io-transport-upnp</feature>
-    <bundle>mvn:org.eclipse.smarthome.binding/org.eclipse.smarthome.binding.hue/${project.version}</bundle>
-  </feature>
-
   <feature name="esh-binding-fsinternetradio" version="${project.version}">
     <feature>esh-base</feature>
     <feature>esh-io-transport-upnp</feature>
     <bundle>mvn:org.eclipse.smarthome.binding/org.eclipse.smarthome.binding.fsinternetradio/${project.version}</bundle>
+  </feature>
+
+  <feature name="esh-binding-homematic" version="${project.version}">
+    <feature>esh-base</feature>
+    <feature>esh-io-transport-upnp</feature>
+    <bundle>mvn:org.eclipse.smarthome.binding/org.eclipse.smarthome.binding.homematic/${project.version}</bundle>
+  </feature>
+
+  <feature name="esh-binding-hue" version="${project.version}">
+    <feature>esh-base</feature>
+    <feature>esh-io-transport-upnp</feature>
+    <bundle>mvn:org.eclipse.smarthome.binding/org.eclipse.smarthome.binding.hue/${project.version}</bundle>
   </feature>
 
   <feature name="esh-binding-lifx" version="${project.version}">
@@ -76,8 +90,22 @@
     <bundle>mvn:org.eclipse.smarthome.binding/org.eclipse.smarthome.binding.lirc/${project.version}</bundle>
   </feature>
 
+  <feature name="esh-binding-mqtt" version="${project.version}">
+    <feature>esh-base</feature>
+    <feature>esh-io-transport-mqtt</feature>
+
+    <requirement>esh.tp;filter:="(feature=commons-net)"</requirement>
+    <feature dependency="true">esh.tp-commons-net</feature>
+
+    <bundle>mvn:org.eclipse.smarthome.binding/org.eclipse.smarthome.binding.mqtt/${project.version}</bundle>
+  </feature>
+
   <feature name="esh-binding-ntp" version="${project.version}">
     <feature>esh-base</feature>
+
+    <requirement>esh.tp;filter:="(feature=commons-net)"</requirement>
+    <feature dependency="true">esh.tp-commons-net</feature>
+
     <bundle>mvn:org.eclipse.smarthome.binding/org.eclipse.smarthome.binding.ntp/${project.version}</bundle>
   </feature>
 
@@ -175,6 +203,10 @@
     <feature>esh-base</feature>
     <feature>esh-ui</feature>
     <feature dependency="true">esh-io-rest-sitemap</feature>
+
+    <requirement>esh.tp;filter:="(feature=commons-net)"</requirement>
+    <feature dependency="true">esh.tp-commons-net</feature>
+
     <bundle>mvn:org.eclipse.smarthome.extension.ui/org.eclipse.smarthome.ui.basic/${project.version}</bundle>
   </feature>
 
@@ -198,6 +230,10 @@
   <feature name="esh-io-mqttembeddedbroker" description="Embedded MQTT Broker" version="${project.version}">
     <feature>esh-base</feature>
     <feature>esh-io-transport-mqtt</feature>
+
+    <requirement>esh.tp;filter:="(feature=commons-net)"</requirement>
+    <feature dependency="true">esh.tp-commons-net</feature>
+
     <bundle>mvn:org.eclipse.smarthome.io/org.eclipse.smarthome.io.mqttembeddedbroker/${project.version}</bundle>
   </feature>
 

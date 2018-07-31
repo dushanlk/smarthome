@@ -29,6 +29,7 @@ import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.binding.hue.internal.FullLight;
 import org.eclipse.smarthome.binding.hue.internal.HueBridge;
 import org.eclipse.smarthome.binding.hue.internal.State;
+import org.eclipse.smarthome.binding.hue.internal.State.ColorMode;
 import org.eclipse.smarthome.binding.hue.internal.StateUpdate;
 import org.eclipse.smarthome.core.library.types.HSBType;
 import org.eclipse.smarthome.core.library.types.IncreaseDecreaseType;
@@ -44,6 +45,7 @@ import org.eclipse.smarthome.core.thing.ThingTypeUID;
 import org.eclipse.smarthome.core.thing.binding.BaseThingHandler;
 import org.eclipse.smarthome.core.thing.binding.ThingHandler;
 import org.eclipse.smarthome.core.types.Command;
+import org.eclipse.smarthome.core.types.UnDefType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,7 +53,7 @@ import org.slf4j.LoggerFactory;
  * {@link HueLightHandler} is the handler for a hue light. It uses the {@link HueClient} to execute the actual
  * command.
  *
- * @author Dennis Nobel - Initial contribution of hue binding
+ * @author Dennis Nobel - Initial contribution
  * @author Oliver Libutzki
  * @author Kai Kreuzer - stabilized code
  * @author Andre Fuechsel - implemented switch off when brightness == 0, changed to support generic thing types, changed
@@ -62,7 +64,7 @@ import org.slf4j.LoggerFactory;
  *         bulbs
  * @author Yordan Zhelev - added alert and effect functions
  * @author Denis Dudnik - switched to internally integrated source of Jue library
- *
+ * @author Christoph Weitkamp - Added support for bulbs using CIE XY colormode only
  */
 @NonNullByDefault
 public class HueLightHandler extends BaseThingHandler implements LightStatusListener {
@@ -241,7 +243,7 @@ public class HueLightHandler extends BaseThingHandler implements LightStatusList
                     if (hsbCommand.getBrightness().intValue() == 0) {
                         lightState = LightStateConverter.toOnOffLightState(OnOffType.OFF);
                     } else {
-                        lightState = LightStateConverter.toColorLightState(hsbCommand);
+                        lightState = LightStateConverter.toColorLightState(hsbCommand, light.getState());
                     }
                 } else if (command instanceof PercentType) {
                     lightState = LightStateConverter.toBrightnessLightState((PercentType) command);
@@ -273,6 +275,15 @@ public class HueLightHandler extends BaseThingHandler implements LightStatusList
                 break;
         }
         if (lightState != null) {
+            // Cache values which we have sent
+            Integer tmpBrightness = lightState.getBrightness();
+            if (tmpBrightness != null) {
+                lastSentBrightness = tmpBrightness;
+            }
+            Integer tmpColotTemp = lightState.getColorTemperature();
+            if (tmpColotTemp != null) {
+                lastSentColorTemp = tmpBrightness;
+            }
             hueBridge.updateLightState(light, lightState);
         } else {
             logger.warn("Command sent to an unknown channel id: {}", channelUID);
@@ -300,7 +311,6 @@ public class HueLightHandler extends BaseThingHandler implements LightStatusList
         if (currentColorTemp != null) {
             int newColorTemp = LightStateConverter.toAdjustedColorTemp(command, currentColorTemp);
             stateUpdate = new StateUpdate().setColorTemperature(newColorTemp);
-            lastSentColorTemp = newColorTemp;
         }
         return stateUpdate;
     }
@@ -319,7 +329,6 @@ public class HueLightHandler extends BaseThingHandler implements LightStatusList
         if (currentBrightness != null) {
             int newBrightness = LightStateConverter.toAdjustedBrightness(command, currentBrightness);
             stateUpdate = createBrightnessStateUpdate(currentBrightness, newBrightness);
-            lastSentBrightness = newBrightness;
         }
         return stateUpdate;
     }
@@ -395,14 +404,19 @@ public class HueLightHandler extends BaseThingHandler implements LightStatusList
         }
         updateState(CHANNEL_COLOR, hsbType);
 
-        PercentType percentType = LightStateConverter.toColorTemperaturePercentType(fullLight.getState());
-        updateState(CHANNEL_COLORTEMPERATURE, percentType);
-
-        percentType = LightStateConverter.toBrightnessPercentType(fullLight.getState());
-        if (!fullLight.getState().isOn()) {
-            percentType = new PercentType(0);
+        ColorMode colorMode = fullLight.getState().getColorMode();
+        if (colorMode != null && colorMode.equals(ColorMode.CT)) {
+            PercentType colorTempPercentType = LightStateConverter.toColorTemperaturePercentType(fullLight.getState());
+            updateState(CHANNEL_COLORTEMPERATURE, colorTempPercentType);
+        } else {
+            updateState(CHANNEL_COLORTEMPERATURE, UnDefType.NULL);
         }
-        updateState(CHANNEL_BRIGHTNESS, percentType);
+
+        PercentType brightnessPercentType = LightStateConverter.toBrightnessPercentType(fullLight.getState());
+        if (!fullLight.getState().isOn()) {
+            brightnessPercentType = new PercentType(0);
+        }
+        updateState(CHANNEL_BRIGHTNESS, brightnessPercentType);
 
         if (fullLight.getState().isOn()) {
             updateState(CHANNEL_SWITCH, OnOffType.ON);

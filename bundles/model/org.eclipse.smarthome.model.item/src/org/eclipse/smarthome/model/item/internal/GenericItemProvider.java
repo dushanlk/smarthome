@@ -29,13 +29,13 @@ import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.config.core.Configuration;
 import org.eclipse.smarthome.core.common.registry.AbstractProvider;
+import org.eclipse.smarthome.core.items.ActiveItem;
 import org.eclipse.smarthome.core.items.GenericItem;
 import org.eclipse.smarthome.core.items.GroupFunction;
 import org.eclipse.smarthome.core.items.GroupItem;
 import org.eclipse.smarthome.core.items.Item;
 import org.eclipse.smarthome.core.items.ItemFactory;
 import org.eclipse.smarthome.core.items.ItemProvider;
-import org.eclipse.smarthome.core.items.MetadataRegistry;
 import org.eclipse.smarthome.core.items.dto.GroupFunctionDTO;
 import org.eclipse.smarthome.core.items.dto.ItemDTOMapper;
 import org.eclipse.smarthome.core.types.StateDescriptionFragment;
@@ -227,7 +227,6 @@ public class GenericItemProvider extends AbstractProvider<Item>
                     Item item = createItemFromModelItem(modelItem);
                     if (item != null) {
                         internalDispatchBindings(modelName, item, modelItem.getBindings());
-                        provideTags(modelItem);
                     }
                 }
             }
@@ -239,20 +238,11 @@ public class GenericItemProvider extends AbstractProvider<Item>
         }
     }
 
-    private void provideTags(ModelItem modelItem) {
-        if (modelItem.getTags() == null || modelItem.getTags().isEmpty()) {
-            return;
-        }
-        String tagString = String.join("|", modelItem.getTags());
-        genericMetaDataProvider.addMetadata(MetadataRegistry.INTERNAL_NAMESPACE_PREFIX + "tags", modelItem.getName(),
-                tagString, null);
-    }
-
     private Item createItemFromModelItem(ModelItem modelItem) {
-        GenericItem item = null;
+        Item item = null;
         if (modelItem instanceof ModelGroupItem) {
             ModelGroupItem modelGroupItem = (ModelGroupItem) modelItem;
-            GenericItem baseItem;
+            Item baseItem;
             try {
                 baseItem = createItemOfType(modelGroupItem.getType(), modelGroupItem.getName());
             } catch (IllegalArgumentException e) {
@@ -277,7 +267,7 @@ public class GenericItemProvider extends AbstractProvider<Item>
                 return null;
             }
         }
-        if (item != null) {
+        if (item != null && item instanceof ActiveItem) {
             String label = modelItem.getLabel();
             String format = extractFormat(label);
             if (format != null) {
@@ -285,8 +275,9 @@ public class GenericItemProvider extends AbstractProvider<Item>
                 stateDescriptionFragments.put(modelItem.getName(),
                         StateDescriptionFragmentBuilder.create().withPattern(format).build());
             }
-            item.setLabel(label);
-            item.setCategory(modelItem.getIcon());
+            ((ActiveItem) item).setLabel(label);
+            ((ActiveItem) item).setCategory(modelItem.getIcon());
+            assignTags(modelItem, (ActiveItem) item);
             return item;
         } else {
             return null;
@@ -304,8 +295,14 @@ public class GenericItemProvider extends AbstractProvider<Item>
         return format;
     }
 
-    private GroupItem applyGroupFunction(GenericItem baseItem, ModelGroupItem modelGroupItem,
-            ModelGroupFunction function) {
+    private void assignTags(ModelItem modelItem, ActiveItem item) {
+        List<String> tags = modelItem.getTags();
+        for (String tag : tags) {
+            item.addTag(tag);
+        }
+    }
+
+    private GroupItem applyGroupFunction(Item baseItem, ModelGroupItem modelGroupItem, ModelGroupFunction function) {
         GroupFunctionDTO dto = new GroupFunctionDTO();
         dto.name = function.getName();
         dto.params = modelGroupItem.getArgs().toArray(new String[modelGroupItem.getArgs().size()]);
@@ -407,7 +404,7 @@ public class GenericItemProvider extends AbstractProvider<Item>
                     logger.error("Binding configuration of type '{}' of item '{}' could not be parsed correctly.",
                             bindingType, item.getName(), e);
                 }
-            } else if (!bindingType.startsWith(MetadataRegistry.INTERNAL_NAMESPACE_PREFIX)) {
+            } else {
                 genericMetaDataProvider.addMetadata(bindingType, item.getName(), config, configuration.getProperties());
             }
         }
@@ -523,13 +520,13 @@ public class GenericItemProvider extends AbstractProvider<Item>
      *
      * @return An Item instance of type {@code itemType} or null if no item factory for it was found.
      */
-    private GenericItem createItemOfType(String itemType, String itemName) {
+    private Item createItemOfType(String itemType, String itemName) {
         if (itemType == null) {
             return null;
         }
 
         for (ItemFactory factory : itemFactorys) {
-            GenericItem item = factory.createItem(itemType, itemName);
+            Item item = factory.createItem(itemType, itemName);
             if (item != null) {
                 logger.trace("Created item '{}' of type '{}'", itemName, itemType);
                 return item;

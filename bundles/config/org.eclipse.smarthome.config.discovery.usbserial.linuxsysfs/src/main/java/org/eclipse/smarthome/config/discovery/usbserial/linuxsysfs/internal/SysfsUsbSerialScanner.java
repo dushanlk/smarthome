@@ -20,6 +20,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -154,8 +155,7 @@ public class SysfsUsbSerialScanner implements UsbSerialScanner {
      * <p/>
      * If the symbolic link cannot be converted to the real path, null is returned and a warning is logged.
      */
-    @Nullable
-    private Path getSysfsDevicePath(Path ttyFile) {
+    private @Nullable Path getSysfsDevicePath(Path ttyFile) {
         try {
             return ttyFile.toRealPath();
         } catch (IOException e) {
@@ -171,8 +171,7 @@ public class SysfsUsbSerialScanner implements UsbSerialScanner {
      * <p/>
      * Returns null if the path does not point to a folder within the sysfs description of a USB device.
      */
-    @Nullable
-    private UsbSerialDeviceInformation tryGetUsbSerialDeviceInformation(SerialPortInfo serialPortInfo)
+    private @Nullable UsbSerialDeviceInformation tryGetUsbSerialDeviceInformation(SerialPortInfo serialPortInfo)
             throws IOException {
         Path usbInterfacePath = getUsbInterfaceParentPath(serialPortInfo.getSysfsPath());
 
@@ -193,8 +192,7 @@ public class SysfsUsbSerialScanner implements UsbSerialScanner {
      * Walks up the directory structure of a path in the sysfs, trying to find a directory that represents an interface
      * of a USB device.
      */
-    @Nullable
-    private Path getUsbInterfaceParentPath(Path sysfsPath) {
+    private @Nullable Path getUsbInterfaceParentPath(Path sysfsPath) {
         if (sysfsPath.getFileName() == null) {
             return null;
         } else if (SYSFS_USB_INTERFACE_DIRECTORY_PATTERN.matcher(sysfsPath.getFileName().toString()).matches()) {
@@ -243,19 +241,35 @@ public class SysfsUsbSerialScanner implements UsbSerialScanner {
         return new String(readAllBytes(path)).trim();
     }
 
-    @Nullable
-    private String getContentIfFileExists(Path path) throws IOException {
+    private @Nullable String getContentIfFileExists(Path path) throws IOException {
         return exists(path) ? getContent(path) : null;
     }
 
     private void extractConfiguration(Map<String, Object> config) {
-        sysfsTtyDevicesDirectory = config
+        String newSysfsTtyDevicesDirectory = config
                 .getOrDefault(SYSFS_TTY_DEVICES_DIRECTORY_ATTRIBUTE, SYSFS_TTY_DEVICES_DIRECTORY_DEFAULT).toString();
-        devDirectory = config.getOrDefault(DEV_DIRECTORY_ATTRIBUTE, DEV_DIRECTORY_DEFAULT).toString();
+        String newDevDirectory = config.getOrDefault(DEV_DIRECTORY_ATTRIBUTE, DEV_DIRECTORY_DEFAULT).toString();
+
+        boolean configurationIsChanged = !(Objects.equals(sysfsTtyDevicesDirectory, newSysfsTtyDevicesDirectory)
+                && Objects.equals(devDirectory, newDevDirectory));
+
+        if (configurationIsChanged) {
+            sysfsTtyDevicesDirectory = newSysfsTtyDevicesDirectory;
+            devDirectory = newDevDirectory;
+        }
 
         if (!canPerformScans()) {
-            logger.info("Cannot perform scans with this configuration: sysfsTtyDevicesDirectory: {}, devDirectory: {}",
+            String logString = String.format(
+                    "Cannot perform scans with this configuration: sysfsTtyDevicesDirectory: {}, devDirectory: {}",
                     sysfsTtyDevicesDirectory, devDirectory);
+
+            if (configurationIsChanged) {
+                // Warn if the configuration was actively changed
+                logger.warn(logString);
+            } else {
+                // Otherwise, only debug log - so that, in particular, on Non-Linux systems users do not see warning
+                logger.debug(logString);
+            }
         }
     }
 

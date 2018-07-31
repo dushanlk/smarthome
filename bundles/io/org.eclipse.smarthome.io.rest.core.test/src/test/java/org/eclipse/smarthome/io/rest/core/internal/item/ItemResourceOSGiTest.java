@@ -33,7 +33,6 @@ import javax.ws.rs.core.UriInfo;
 import org.apache.commons.io.IOUtils;
 import org.eclipse.smarthome.core.items.GenericItem;
 import org.eclipse.smarthome.core.items.ItemProvider;
-import org.eclipse.smarthome.core.items.ItemRegistry;
 import org.eclipse.smarthome.core.items.ManagedItemProvider;
 import org.eclipse.smarthome.core.items.Metadata;
 import org.eclipse.smarthome.core.items.MetadataKey;
@@ -42,6 +41,7 @@ import org.eclipse.smarthome.core.items.dto.GroupItemDTO;
 import org.eclipse.smarthome.core.items.dto.MetadataDTO;
 import org.eclipse.smarthome.core.library.items.DimmerItem;
 import org.eclipse.smarthome.core.library.items.SwitchItem;
+import org.eclipse.smarthome.io.rest.RESTResource;
 import org.eclipse.smarthome.test.java.JavaOSGiTest;
 import org.junit.Before;
 import org.junit.Test;
@@ -65,7 +65,6 @@ public class ItemResourceOSGiTest extends JavaOSGiTest {
     private ItemProvider itemProvider;
 
     private ItemResource itemResource;
-    private ItemRegistry itemRegistry;
 
     private ManagedItemProvider managedItemProvider;
 
@@ -73,10 +72,9 @@ public class ItemResourceOSGiTest extends JavaOSGiTest {
     public void setup() {
         initMocks(this);
 
-        itemRegistry = getService(ItemRegistry.class);
-        assertNotNull(itemRegistry);
+        itemResource = getService(RESTResource.class, ItemResource.class);
+        assertNotNull(itemResource);
 
-        itemResource = getService(ItemResource.class);
         itemResource.uriInfo = mock(UriInfo.class);
 
         registerVolatileStorageService();
@@ -92,10 +90,10 @@ public class ItemResourceOSGiTest extends JavaOSGiTest {
 
     @Test
     public void shouldFilterItemsByTag() throws Exception {
-        itemRegistry.addTag(ITEM_NAME1, "Tag1");
-        itemRegistry.addTag(ITEM_NAME2, "Tag1");
-        itemRegistry.addTag(ITEM_NAME2, "Tag2");
-        itemRegistry.addTag(ITEM_NAME3, "Tag2");
+        item1.addTag("Tag1");
+        item2.addTag("Tag1");
+        item2.addTag("Tag2");
+        item3.addTag("Tag2");
 
         Response response = itemResource.getItems(null, null, "Tag1", null, false, null);
         assertThat(readItemNamesFromResponse(response), hasItems(ITEM_NAME1, ITEM_NAME2));
@@ -143,7 +141,7 @@ public class ItemResourceOSGiTest extends JavaOSGiTest {
         Response response = itemResource.getItems(null, null, "MyTag", null, false, "type,name");
 
         JsonElement result = parser.parse(IOUtils.toString((InputStream) response.getEntity()));
-        JsonElement expected = parser.parse("[{type: \"Switch\", name: \"Switch\"}]");
+        JsonElement expected = parser.parse("[{editable: true, type: \"Switch\", name: \"Switch\"}]");
         assertEquals(expected, result);
     }
 
@@ -160,7 +158,7 @@ public class ItemResourceOSGiTest extends JavaOSGiTest {
         registerService(itemProvider);
 
         response = itemResource.addTag("UnmanagedItem", "MyTag");
-        assertThat(response.getStatus(), is(Status.OK.getStatusCode()));
+        assertThat(response.getStatus(), is(Status.METHOD_NOT_ALLOWED.getStatusCode()));
     }
 
     private List<String> readItemNamesFromResponse(Response response) throws IOException {

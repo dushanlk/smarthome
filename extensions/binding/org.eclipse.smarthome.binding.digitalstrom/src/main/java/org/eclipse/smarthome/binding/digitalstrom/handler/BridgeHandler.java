@@ -560,12 +560,10 @@ public class BridgeHandler extends BaseBridgeHandler
             case APPLICATION_TOKEN_GENERATED:
                 if (connMan != null) {
                     Configuration config = this.getConfig();
-                    if (config != null) {
-                        config.remove(USER_NAME);
-                        config.remove(PASSWORD);
-                        config.put(APPLICATION_TOKEN, connMan.getApplicationToken());
-                        this.updateConfiguration(config);
-                    }
+                    config.remove(USER_NAME);
+                    config.remove(PASSWORD);
+                    config.put(APPLICATION_TOKEN, connMan.getApplicationToken());
+                    this.updateConfiguration(config);
                 }
                 return;
             default:
@@ -665,7 +663,7 @@ public class BridgeHandler extends BaseBridgeHandler
                     break;
                 case UNKNOWN_HOST:
                     updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR,
-                            "Unkown host name, please check the set host name!");
+                            "Unknown host name, please check the set host name!");
                     break;
                 case INVALID_URL:
                     updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, "Invalid URL is set.");

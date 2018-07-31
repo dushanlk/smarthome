@@ -90,3 +90,24 @@ Two methods have to be implemented to achieve this:
 ```java
 <item-type> MyItem { channel="<bindingID>:<thing-typeID>:MyThing:myChannel"[profile="MyScope:MyProfile"]}
 ```
+
+## Existing Profiles
+
+### FollowProfile
+
+If one device should "follow" the actions of another device, the FollowProfile can be used. The term "follow" in this case means that any state that is sent to an `Item` will be forwarded from this `Item` to any linked channel with the FollowProfile. The FollowProfile takes state updates on an `Item` and sends them as a command onto the channel. In the direction from the ThingHandler towards the `Item`, the FollowProfile ignores state updates.
+
+```java
+<itemType> <itemName> { channel="<channelUID>", channel="<followChannelUID>"[profile="follow"]"}
+```
+
+### OffsetProfile
+
+The `OffsetProfile` provides the possibility to adjust a value from a device before it arrives at the framework.
+An offset can be specified via the parameter `offset` which has to be a `QuantityType` or `DecimalType`.
+A positive offset is the amount of change from the device towards the framework, i.e. all values from the device are increased by this offset and values sent to the device are decreased by this offset.
+A negative offset subtracts the offset from the value sent by the device to the framework and adds the offset to values sent from the framework to the device.
+
+```java
+Number <itemName> { channel="<bindingID>:<thing-typeID>:<thingName>:<channelName>"[profile="offset", offset="<value>"]}
+```

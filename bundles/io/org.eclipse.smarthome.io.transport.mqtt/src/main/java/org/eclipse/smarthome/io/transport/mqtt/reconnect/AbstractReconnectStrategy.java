@@ -30,10 +30,10 @@ public abstract class AbstractReconnectStrategy {
     /**
      * Will be called by {@see MqttBrokerConnection.setReconnectPolicy()}.
      *
-     * @param brokerConnection The broker connection
+     * @param mqttBrokerConnectionImpl The broker connection
      */
-    public void setBrokerConnection(MqttBrokerConnection brokerConnection) {
-        this.brokerConnection = brokerConnection;
+    public void setBrokerConnection(MqttBrokerConnection mqttBrokerConnectionImpl) {
+        this.brokerConnection = mqttBrokerConnectionImpl;
     }
 
     /**
