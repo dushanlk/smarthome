@@ -29,6 +29,7 @@
     <module>org.eclipse.smarthome.binding.dmx</module>
     <module>org.eclipse.smarthome.binding.dmx.test</module>
     <module>org.eclipse.smarthome.binding.homematic</module>
+    <module>org.eclipse.smarthome.binding.homematic.test</module>
     <module>org.eclipse.smarthome.binding.hue</module>
     <module>org.eclipse.smarthome.binding.hue.test</module>
     <module>org.eclipse.smarthome.binding.fsinternetradio</module>
@@ -39,6 +40,8 @@
     <module>org.eclipse.smarthome.binding.mqtt.test</module>
     <module>org.eclipse.smarthome.binding.ntp</module>
     <module>org.eclipse.smarthome.binding.ntp.test</module>
+    <module>org.eclipse.smarthome.binding.onewire</module>
+    <module>org.eclipse.smarthome.binding.onewire.test</module>
     <module>org.eclipse.smarthome.binding.serialbutton</module>
     <module>org.eclipse.smarthome.binding.sonos</module>
     <module>org.eclipse.smarthome.binding.tradfri</module>

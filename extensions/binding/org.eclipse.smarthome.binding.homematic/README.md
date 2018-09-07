@@ -1,7 +1,7 @@
 # Homematic Binding
 
 This is the binding for the [eQ-3 Homematic Solution](http://www.eq-3.de/).
-This binding allows you to integrate, view, control and configure all Homematic devices in Eclipse Smarthome.
+This binding allows you to integrate, view, control and configure all Homematic devices in Eclipse SmartHome.
 
 ## Supported Bridges
 
@@ -123,7 +123,7 @@ The timeout in seconds for connections to a Homematic gateway (default = 15)
 The time to live in seconds for discovery results of a Homematic gateway (default = -1, which means infinite)
 
 -   **socketMaxAlive**
-The maximum lifetime of a pooled socket connection to the Homematic gateway in seconds (default = 900)
+The maximum lifetime of a socket connection to and from a Homematic gateway in seconds (default = 900)
 
 -   **rfPort**
 The port number of the RF daemon (default = 2001)
@@ -141,7 +141,12 @@ The port number of the CUxD daemon (default = 8701)
 Time in seconds that the controller will be in install mode when a device discovery is initiated (default = 60)
 
 -   **unpairOnDeletion**
-If true, devices are automatically unpaired from a gateway when the corresponding thing is deleted (default = false)
+If set to true, devices are automatically unpaired from the gateway when their corresponding things are deleted.
+**Warning!** The option "factoryResetOnDeletion" also unpairs a device, so in order to avoid unpairing on deletion completely, both options need to be set to false! (default = false)
+
+-   **factoryResetOnDeletion**
+If set to true, devices are automatically factory reset when their corresponding things are removed.
+Due to the factory reset, the device will also be unpaired from the gateway, even if "unpairOnDeletion" is set to false! (default = false)
 
 The syntax for a bridge is:
 
@@ -189,6 +194,7 @@ Bridge homematic:bridge:ccu [ gatewayAddress="..." ]
 
 The first parameter after Thing is the device type, the second the serial number.
 If you are using Homegear, you have to add the prefix ```HG-``` for each type.
+The ```HG-``` prefix is only needed for Things, not for Items or channel configs.
 This is necessary, because the Homegear devices supports more datapoints than Homematic devices.
 
 ```java
@@ -223,6 +229,16 @@ The disadvantage is of course, that all events for this channel are delayed.
 ```
 
 The Type is the device type, channel number and lowercase channel name separated with a underscore.
+Note that, for Homegear devices, in contrast to the specification of the Thing above no ```HG-``` prefix is needed for the specification of the Type of the Channel.
+
+The channel configs are optional.
+Example without channel configs
+```java
+  Thing HM-LC-Dim1T-Pl-2    JEQ0999999 "Name"  @  "Location" {
+      Channels:
+          Type HM-LC-Dim1T-Pl-2_1_LEVEL : 1#LEVEL
+  }
+```
 
 ### Items
 

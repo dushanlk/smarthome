@@ -59,6 +59,10 @@ var paths = {
             './web-src/js/extensions/controller*.js',
             './web-src/js/rules/controller*.js',
             './web-src/js/firmware/controller*.js',
+            './web-src/js/control/control-module.js',
+            './web-src/js/control/route-config.js',
+            './web-src/js/control/service*.js',
+            './web-src/js/control/**/component*.js',
             './web-src/js/control/controller*.js',
             './web-src/js/setup/controller*.js',
             './web-src/js/**/directive*.js',
@@ -227,7 +231,8 @@ gulp.task('serve', ['test'], function () {
 
 
 gulp.task('inject', ['build'], function () {
-   var target = gulp.src('./web/index.html');
+   var target = gulp.src('./web-src/index.html.template').pipe(rename('index.html'));
+
    // It's not necessary to read the files (will speed up things), we're only after their paths:
    var files;
    console.log("MODE: " + (isDevelopment ? "DEV" : "PROD"));
@@ -263,6 +268,10 @@ gulp.task('inject', ['build'], function () {
                      './web-src/js/extensions/controller*.js',
                      './web-src/js/rules/controller*.js',
                      './web-src/js/firmware/controller*.js',
+                     './web-src/js/control/control-module.js',
+                     './web-src/js/control/route-config.js',
+                     './web-src/js/control/service*.js',
+                     './web-src/js/control/**/component*.js',
                      './web-src/js/control/controller*.js',
                      './web-src/js/setup/controller*.js',
                      './web-src/js/**/directive*.js',
@@ -290,7 +299,7 @@ gulp.task('inject', ['build'], function () {
             return '<script src="' + newPath  + '"></script>';
         }
     }))
-      .pipe(isDevelopment ? gulp.dest('./web-src'):gulp.dest('./web'));
+      .pipe(isDevelopment ? gulp.dest('./web-src') : gulp.dest('./web'));
   });
 
 gulp.task('test',['inject'], function (done) {

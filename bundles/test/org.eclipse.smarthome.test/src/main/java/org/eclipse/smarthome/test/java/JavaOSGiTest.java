@@ -24,7 +24,6 @@ import java.util.function.Predicate;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
-import org.eclipse.smarthome.core.autoupdate.AutoUpdateBindingConfigProvider;
 import org.eclipse.smarthome.test.internal.java.MissingServiceAnalyzer;
 import org.eclipse.smarthome.test.storage.VolatileStorageService;
 import org.junit.After;
@@ -112,6 +111,7 @@ public class JavaOSGiTest extends JavaTest {
         final ServiceReference<T> serviceReferences[] = getServices(clazz);
 
         if (serviceReferences == null) {
+            new MissingServiceAnalyzer(System.out, bundleContext).printMissingServiceDetails(clazz);
             return null;
         }
         final List<T> filteredServiceReferences = new ArrayList<>(serviceReferences.length);
@@ -125,9 +125,15 @@ public class JavaOSGiTest extends JavaTest {
             Assert.fail("More than 1 service matching the filter is registered.");
         }
         if (filteredServiceReferences.isEmpty()) {
+            new MissingServiceAnalyzer(System.out, bundleContext).printMissingServiceDetails(clazz);
             return null;
         } else {
-            return filteredServiceReferences.get(0);
+            T t = filteredServiceReferences.get(0);
+            if (t == null) {
+                new MissingServiceAnalyzer(System.out, bundleContext).printMissingServiceDetails(clazz);
+                return null;
+            }
+            return t;
         }
     }
 
@@ -302,19 +308,6 @@ public class JavaOSGiTest extends JavaTest {
     public void unregisterMocks() {
         registeredServices.forEach((interfaceName, services) -> services.forEach(service -> service.unregister()));
         registeredServices.clear();
-    }
-
-    /**
-     * Inject a service to disable the auto-update feature.
-     */
-    protected void disableItemAutoUpdate() {
-        registerService(new AutoUpdateBindingConfigProvider() {
-
-            @Override
-            public @Nullable Boolean autoUpdate(String itemName) {
-                return false;
-            }
-        });
     }
 
 }

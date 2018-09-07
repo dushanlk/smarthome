@@ -25,9 +25,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.eclipse.jdt.annotation.Nullable;
-import org.eclipse.smarthome.core.thing.i18n.ThingTypeI18nLocalizationService;
-import org.eclipse.smarthome.core.thing.type.ChannelGroupType;
-import org.eclipse.smarthome.core.thing.type.ChannelGroupTypeUID;
+import org.eclipse.smarthome.core.thing.i18n.ChannelTypeI18nLocalizationService;
 import org.eclipse.smarthome.core.thing.type.ChannelType;
 import org.eclipse.smarthome.core.thing.type.ChannelTypeBuilder;
 import org.eclipse.smarthome.core.thing.type.ChannelTypeProvider;
@@ -52,9 +50,9 @@ import org.osgi.service.component.annotations.Reference;
  * @author Moritz Kammerer - Added system trigger types
  * @author Christoph Weitkamp - Added support for translation
  * @author Stefan Triller - Added more system channels
- * @author Christoph Weitkamp - factored out common i18n aspects into {@link ThingTypeI18nLocalizationService}
+ * @author Christoph Weitkamp - factored out common i18n aspects into ThingTypeI18nLocalizationService
  */
-@Component(immediate = true)
+@Component
 public class DefaultSystemChannelTypeProvider implements ChannelTypeProvider {
 
     static final String BINDING_ID = "system";
@@ -143,11 +141,13 @@ public class DefaultSystemChannelTypeProvider implements ChannelTypeProvider {
      */
     public static final ChannelType SYSTEM_LOCATION = ChannelTypeBuilder
             .state(new ChannelTypeUID(BINDING_ID, "location"), "Location", "Location")
-            .withDescription("Location in lat./lon./height coordinates").withStateDescription(
-                    StateDescriptionFragmentBuilder.create().withReadOnly(true).build().toStateDescription())
+            .withDescription("Location in lat./lon./height coordinates")
+            .withStateDescription(StateDescriptionFragmentBuilder.create().withReadOnly(true)
+                    .withPattern("%2$s°N %3$s°E %1$sm").build().toStateDescription())
             .build();
+
     /**
-     * Motion default system wide {@link ChannelType} which indications whether motion was detected (state. ON)
+     * Motion: default system wide {@link ChannelType} which indications whether motion was detected (state ON)
      */
     public static final ChannelType SYSTEM_MOTION = ChannelTypeBuilder
             .state(new ChannelTypeUID(BINDING_ID, "motion"), "Motion", "Switch")
@@ -160,23 +160,26 @@ public class DefaultSystemChannelTypeProvider implements ChannelTypeProvider {
      */
     public static final ChannelType SYSTEM_BRIGHTNESS = ChannelTypeBuilder
             .state(new ChannelTypeUID(BINDING_ID, "brightness"), "Brightness", "Dimmer")
+            .withDescription("Controls the brightness and switches the light on and off").withCategory("DimmableLight")
             .withStateDescription(
                     new StateDescription(BigDecimal.ZERO, new BigDecimal(100), null, "%d %%", false, null))
-            .withCategory("Light").build();
+            .build();
 
     /**
      * Color: default system wide {@link ChannelType} which allows changing the color
      */
     public static final ChannelType SYSTEM_COLOR = ChannelTypeBuilder
-            .state(new ChannelTypeUID(BINDING_ID, "color"), "Color", "Color").withCategory("ColorLight").build();
+            .state(new ChannelTypeUID(BINDING_ID, "color"), "Color", "Color")
+            .withDescription("Controls the color of the light").withCategory("ColorLight").build();
 
     /**
      * Color-temperature: default system wide {@link ChannelType} which allows changing the color temperature
      */
     public static final ChannelType SYSTEM_COLOR_TEMPERATURE = ChannelTypeBuilder
             .state(new ChannelTypeUID(BINDING_ID, "color-temperature"), "Color Temperature", "Dimmer")
+            .withDescription("Controls the color temperature of the light").withCategory("ColorLight")
             .withStateDescription(new StateDescription(BigDecimal.ZERO, new BigDecimal(100), null, "%d", false, null))
-            .withCategory("ColorLight").build();
+            .build();
 
     // media channels
 
@@ -229,7 +232,7 @@ public class DefaultSystemChannelTypeProvider implements ChannelTypeProvider {
      */
     public static final ChannelType SYSTEM_WIND_DIRECTION = ChannelTypeBuilder
             .state(new ChannelTypeUID(BINDING_ID, "wind-direction"), "Wind Direction", "Number:Angle")
-            .withCategory("Wind")
+            .withDescription("Current wind direction expressed as an angle").withCategory("Wind")
             .withStateDescription(
                     new StateDescription(BigDecimal.ZERO, new BigDecimal(360), null, "%.0f %unit%", true, null))
             .build();
@@ -238,7 +241,8 @@ public class DefaultSystemChannelTypeProvider implements ChannelTypeProvider {
      * Wind-speed: system wide {@link ChannelType} which shows the wind speed
      */
     public static final ChannelType SYSTEM_WIND_SPEED = ChannelTypeBuilder
-            .state(new ChannelTypeUID(BINDING_ID, "wind-speed"), "Wind Speed", "Number:Speed").withCategory("Wind")
+            .state(new ChannelTypeUID(BINDING_ID, "wind-speed"), "Wind Speed", "Number:Speed")
+            .withDescription("Current wind speed").withCategory("Wind")
             .withStateDescription(StateDescriptionFragmentBuilder.create().withReadOnly(true).withPattern("%.1f %unit%")
                     .build().toStateDescription())
             .build();
@@ -247,10 +251,10 @@ public class DefaultSystemChannelTypeProvider implements ChannelTypeProvider {
      * Outdoor-temperature: system wide {@link ChannelType} which shows the outdoor temperature
      */
     public static final ChannelType SYSTEM_OUTDOOR_TEMPERATURE = ChannelTypeBuilder
-            .state(new ChannelTypeUID(BINDING_ID, "outdoor-temperature"), "Current Outdoor Temperature",
-                    "Number:Temperature")
-            .withCategory("Temperature").withStateDescription(StateDescriptionFragmentBuilder.create()
-                    .withReadOnly(true).withPattern("%.1f %unit%").build().toStateDescription())
+            .state(new ChannelTypeUID(BINDING_ID, "outdoor-temperature"), "Outdoor Temperature", "Number:Temperature")
+            .withDescription("Current outdoor temperature").withCategory("Temperature")
+            .withStateDescription(StateDescriptionFragmentBuilder.create().withReadOnly(true).withPattern("%.1f %unit%")
+                    .build().toStateDescription())
             .build();
 
     /**
@@ -259,8 +263,9 @@ public class DefaultSystemChannelTypeProvider implements ChannelTypeProvider {
     public static final ChannelType SYSTEM_ATMOSPHERIC_HUMIDITY = ChannelTypeBuilder
             .state(new ChannelTypeUID(BINDING_ID, "atmospheric-humidity"), "Atmospheric Humidity",
                     "Number:Dimensionless")
-            .withCategory("Humidity").withStateDescription(StateDescriptionFragmentBuilder.create().withReadOnly(true)
-                    .withPattern("%.0f %%").build().toStateDescription())
+            .withDescription("Current atmospheric relative humidity").withCategory("Humidity")
+            .withStateDescription(StateDescriptionFragmentBuilder.create().withReadOnly(true).withPattern("%.0f %%")
+                    .build().toStateDescription())
             .build();
 
     /**
@@ -268,8 +273,9 @@ public class DefaultSystemChannelTypeProvider implements ChannelTypeProvider {
      */
     public static final ChannelType SYSTEM_BAROMETRIC_PRESSURE = ChannelTypeBuilder
             .state(new ChannelTypeUID(BINDING_ID, "barometric-pressure"), "Barometric Pressure", "Number:Pressure")
-            .withCategory("Pressure").withStateDescription(StateDescriptionFragmentBuilder.create().withReadOnly(true)
-                    .withPattern("%.3f %unit%").build().toStateDescription())
+            .withDescription("Current barometric pressure").withCategory("Pressure")
+            .withStateDescription(StateDescriptionFragmentBuilder.create().withReadOnly(true).withPattern("%.3f %unit%")
+                    .build().toStateDescription())
             .build();
 
     private static class LocalizedChannelTypeKey {
@@ -321,7 +327,6 @@ public class DefaultSystemChannelTypeProvider implements ChannelTypeProvider {
 
     }
 
-    private static final Collection<ChannelGroupType> CHANNEL_GROUP_TYPES = Collections.emptyList();
     private static final Collection<ChannelType> CHANNEL_TYPES = Collections
             .unmodifiableList(Stream.of(SYSTEM_CHANNEL_SIGNAL_STRENGTH, SYSTEM_CHANNEL_LOW_BATTERY,
                     SYSTEM_CHANNEL_BATTERY_LEVEL, SYSTEM_TRIGGER, SYSTEM_RAWBUTTON, SYSTEM_BUTTON, SYSTEM_RAWROCKER,
@@ -332,7 +337,7 @@ public class DefaultSystemChannelTypeProvider implements ChannelTypeProvider {
 
     private final Map<LocalizedChannelTypeKey, ChannelType> localizedChannelTypeCache = new ConcurrentHashMap<>();
 
-    private ThingTypeI18nLocalizationService thingTypeI18nLocalizationService;
+    private ChannelTypeI18nLocalizationService channelTypeI18nLocalizationService;
     private BundleResolver bundleResolver;
 
     @Override
@@ -358,25 +363,15 @@ public class DefaultSystemChannelTypeProvider implements ChannelTypeProvider {
         return null;
     }
 
-    @Override
-    public ChannelGroupType getChannelGroupType(ChannelGroupTypeUID channelGroupTypeUID, Locale locale) {
-        return null;
-    }
-
-    @Override
-    public Collection<ChannelGroupType> getChannelGroupTypes(Locale locale) {
-        return CHANNEL_GROUP_TYPES;
-    }
-
     @Reference
-    public void setThingTypeI18nLocalizationService(
-            final ThingTypeI18nLocalizationService thingTypeI18nLocalizationService) {
-        this.thingTypeI18nLocalizationService = thingTypeI18nLocalizationService;
+    public void setChannelTypeI18nLocalizationService(
+            final ChannelTypeI18nLocalizationService channelTypeI18nLocalizationService) {
+        this.channelTypeI18nLocalizationService = channelTypeI18nLocalizationService;
     }
 
-    public void unsetThingTypeI18nLocalizationService(
-            final ThingTypeI18nLocalizationService thingTypeI18nLocalizationService) {
-        this.thingTypeI18nLocalizationService = null;
+    public void unsetChannelTypeI18nLocalizationService(
+            final ChannelTypeI18nLocalizationService channelTypeI18nLocalizationService) {
+        this.channelTypeI18nLocalizationService = null;
     }
 
     @Reference
@@ -406,10 +401,10 @@ public class DefaultSystemChannelTypeProvider implements ChannelTypeProvider {
     }
 
     private @Nullable ChannelType localize(Bundle bundle, ChannelType channelType, Locale locale) {
-        if (thingTypeI18nLocalizationService == null) {
+        if (channelTypeI18nLocalizationService == null) {
             return null;
         }
-        return thingTypeI18nLocalizationService.createLocalizedChannelType(bundle, channelType, locale);
+        return channelTypeI18nLocalizationService.createLocalizedChannelType(bundle, channelType, locale);
     }
 
     private LocalizedChannelTypeKey getLocalizedChannelTypeKey(UID uid, Locale locale) {

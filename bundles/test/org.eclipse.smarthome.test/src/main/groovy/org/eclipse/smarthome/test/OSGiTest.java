@@ -25,7 +25,6 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 
-import org.eclipse.smarthome.core.autoupdate.AutoUpdateBindingConfigProvider;
 import org.eclipse.smarthome.core.i18n.LocaleProvider;
 import org.eclipse.smarthome.test.internal.java.MissingServiceAnalyzer;
 import org.eclipse.smarthome.test.storage.VolatileStorageService;
@@ -57,7 +56,7 @@ public abstract class OSGiTest {
     private final Map<String, List<ServiceRegistration<?>>> registeredServices = new HashMap<>();
     protected BundleContext bundleContext;
 
-    protected static final int TIMEOUT = 1000;
+    protected static final int TIMEOUT = 10000;
     protected static final int SLEEPTIME = 50;
 
     @Before
@@ -311,19 +310,6 @@ public abstract class OSGiTest {
     }
 
     /**
-     * Inject a service to disable the auto-update feature.
-     */
-    protected void disableItemAutoUpdate() {
-        registerService(new AutoUpdateBindingConfigProvider() {
-
-            @Override
-            public Boolean autoUpdate(String itemName) {
-                return false;
-            }
-        });
-    }
-
-    /**
      * When this method is called it waits until the condition is fulfilled or the timeout is reached.
      * The condition is specified by a closure, that must return a boolean object. When the condition is
      * not fulfilled Thread.sleep is called at the current Thread for a specified time. After this time
@@ -397,6 +383,7 @@ public abstract class OSGiTest {
         if (beforeLastCall != null) {
             beforeLastCall.call();
         }
+        assertion.call();
     }
 
     protected void waitForAssert(Closure<?> assertion, Closure<?> beforeLastCall) throws Exception {
