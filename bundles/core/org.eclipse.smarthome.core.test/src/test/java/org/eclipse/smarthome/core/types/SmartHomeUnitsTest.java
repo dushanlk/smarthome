@@ -26,6 +26,7 @@ import javax.measure.quantity.Pressure;
 import javax.measure.quantity.Speed;
 import javax.measure.quantity.Temperature;
 
+import org.eclipse.smarthome.core.library.dimension.ArealDensity;
 import org.eclipse.smarthome.core.library.types.QuantityType;
 import org.eclipse.smarthome.core.library.unit.ImperialUnits;
 import org.eclipse.smarthome.core.library.unit.MetricPrefix;
@@ -127,6 +128,15 @@ public class SmartHomeUnitsTest {
         Quantity<Temperature> kelvin = fahrenheit.to(SmartHomeUnits.KELVIN);
         assertThat(kelvin.getUnit(), is(SmartHomeUnits.KELVIN));
         assertThat(kelvin.getValue().doubleValue(), is(closeTo(310.92777777777777778d, DEFAULT_ERROR)));
+    }
+
+    @Test
+    public void testCelsiusSpecialChar() {
+        QuantityType<Temperature> celsius = new QuantityType<>("20 ℃");
+        assertThat(celsius, is(new QuantityType<>("20 °C")));
+        assertThat(celsius.toFullString(), is("20 °C"));
+
+        assertThat(celsius.getUnit().toString(), is("°C"));
     }
 
     @Test
@@ -236,6 +246,21 @@ public class SmartHomeUnitsTest {
     public void testDb() {
         QuantityType<Dimensionless> ratio = new QuantityType<>("100");
         assertEquals("20.0 dB", ratio.toUnit("dB").toString());
+    }
+
+    @Test
+    public void testDobsonUnits() {
+        // https://en.wikipedia.org/wiki/Dobson_unit
+        QuantityType<ArealDensity> oneDU = new QuantityType<ArealDensity>("1 DU");
+        QuantityType<ArealDensity> mmolpsq = oneDU.toUnit(MetricPrefix.MILLI(Units.MOLE).multiply(Units.METRE.pow(-2)));
+        assertThat(mmolpsq.doubleValue(), is(closeTo(0.4462d, DEFAULT_ERROR)));
+        assertThat(mmolpsq.toUnit(SmartHomeUnits.DOBSON_UNIT).doubleValue(), is(closeTo(1, DEFAULT_ERROR)));
+    }
+
+    @Test
+    public void testBar2Pascal() {
+        Quantity<Pressure> bar = Quantities.getQuantity(BigDecimal.valueOf(1), SmartHomeUnits.BAR);
+        assertThat(bar.to(SIUnits.PASCAL), is(Quantities.getQuantity(100000, SIUnits.PASCAL)));
     }
 
 }

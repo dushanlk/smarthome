@@ -4,8 +4,8 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <artifactId>pom</artifactId>
     <groupId>org.eclipse.smarthome.voice</groupId>
+    <artifactId>pom</artifactId>
     <version>0.10.0-SNAPSHOT</version>
   </parent>
   <groupId>org.eclipse.smarthome.voice</groupId>
@@ -13,12 +13,7 @@
 
   <packaging>eclipse-test-plugin</packaging>
 
-  <name>Eclipse SmartHome Mac TTS Tests</name>
-
-  <properties>
-    <bundle.symbolicName>org.eclipse.smarthome.voice.mactts.test</bundle.symbolicName>
-    <bundle.namespace>org.eclipse.smarthome.voice.mactts.test</bundle.namespace>
-  </properties>
+  <name>Eclipse SmartHome macOS Text-to-Speech Tests</name>
 
   <build>
     <plugins>

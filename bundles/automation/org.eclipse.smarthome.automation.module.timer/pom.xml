@@ -4,8 +4,8 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <artifactId>automation</artifactId>
     <groupId>org.eclipse.smarthome.bundles</groupId>
+    <artifactId>automation</artifactId>
     <version>0.10.0-SNAPSHOT</version>
   </parent>
   <groupId>org.eclipse.smarthome.automation</groupId>
@@ -14,10 +14,5 @@
   <packaging>eclipse-plugin</packaging>
 
   <name>Eclipse SmartHome Automation Timer Modules</name>
-
-  <properties>
-    <bundle.symbolicName>org.eclipse.smarthome.automation.module.timer</bundle.symbolicName>
-    <bundle.namespace>org.eclipse.smarthome.automation.module.timer</bundle.namespace>
-  </properties>
 
 </project>

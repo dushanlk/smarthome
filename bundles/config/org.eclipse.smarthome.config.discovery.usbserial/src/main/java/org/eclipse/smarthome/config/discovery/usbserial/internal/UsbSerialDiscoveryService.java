@@ -69,8 +69,7 @@ public class UsbSerialDiscoveryService extends AbstractDiscoveryService implemen
 
     private final Set<UsbSerialDeviceInformation> previouslyDiscovered = new CopyOnWriteArraySet<>();
 
-    @NonNullByDefault({})
-    private UsbSerialDiscovery usbSerialDiscovery;
+    private @NonNullByDefault({}) UsbSerialDiscovery usbSerialDiscovery;
 
     public UsbSerialDiscoveryService() {
         super(5);
@@ -81,9 +80,6 @@ public class UsbSerialDiscoveryService extends AbstractDiscoveryService implemen
     protected void activate(@Nullable Map<String, @Nullable Object> configProperties) {
         super.activate(configProperties);
         usbSerialDiscovery.registerDiscoveryListener(this);
-        if (isBackgroundDiscoveryEnabled()) {
-            usbSerialDiscovery.startBackgroundScanning();
-        }
     }
 
     @Modified

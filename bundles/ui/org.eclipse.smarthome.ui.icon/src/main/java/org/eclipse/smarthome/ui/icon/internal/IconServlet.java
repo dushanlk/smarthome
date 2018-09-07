@@ -30,6 +30,11 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.eclipse.smarthome.ui.icon.IconProvider;
 import org.eclipse.smarthome.ui.icon.IconSet.Format;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Modified;
+import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.ReferenceCardinality;
+import org.osgi.service.component.annotations.ReferencePolicy;
 import org.osgi.service.http.HttpContext;
 import org.osgi.service.http.HttpService;
 import org.osgi.service.http.NamespaceException;
@@ -41,6 +46,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author Kai Kreuzer - Initial contribution
  */
+@Component
 public class IconServlet extends HttpServlet {
 
     private static final long serialVersionUID = 2880642275858634578L;
@@ -48,9 +54,9 @@ public class IconServlet extends HttpServlet {
     private final Logger logger = LoggerFactory.getLogger(IconServlet.class);
 
     private static final String SERVLET_NAME = "/icon";
-    private static final String PARAM_ICONSET = "iconset";
-    private static final String PARAM_FORMAT = "format";
-    private static final String PARAM_STATE = "state";
+    static final String PARAM_ICONSET = "iconset";
+    static final String PARAM_FORMAT = "format";
+    static final String PARAM_STATE = "state";
 
     private long startupTime;
 
@@ -60,6 +66,7 @@ public class IconServlet extends HttpServlet {
 
     private List<IconProvider> iconProvider = new ArrayList<>();
 
+    @Reference
     public void setHttpService(HttpService httpService) {
         this.httpService = httpService;
     }
@@ -68,6 +75,7 @@ public class IconServlet extends HttpServlet {
         this.httpService = null;
     }
 
+    @Reference(cardinality = ReferenceCardinality.AT_LEAST_ONE, policy = ReferencePolicy.DYNAMIC)
     public void addIconProvider(IconProvider iconProvider) {
         this.iconProvider.add(iconProvider);
     }
@@ -92,6 +100,7 @@ public class IconServlet extends HttpServlet {
         modified(config);
     }
 
+    @Modified
     protected void modified(Map<String, Object> config) {
         Object iconSetId = config.get("default");
         if (iconSetId instanceof String) {

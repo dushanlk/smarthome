@@ -242,19 +242,19 @@ md-slider.md-default-theme.hue .md-thumb:after {
 }
 
 .card .clabel {
-	padding: 8px;
-	text-align: center;
+    padding: 8px 8px 8px 15px;
 }
 
 .card.text-left .clabel {
 	text-align: left;
 }
 
-.card .clabel h3 {
+.card span.clabel {
 	text-overflow: ellipsis;
 	overflow: hidden;
 	white-space: nowrap;
 	line-height: 120%;
+	font-size: 20px
 }
 
 .card .cbody {
@@ -335,6 +335,11 @@ md-slider.md-default-theme.hue .md-thumb:after {
 
 .fab-item .item-content .actions i:last-child {
 	float: right;
+}
+
+.item-label-container {
+	display: flex;
+	align-items: center;
 }
 
 .extensions .card .item-content {
@@ -676,6 +681,12 @@ md-progress-circular.md-default-theme .md-inner .md-left .md-half-circle
 
 .includeConfig .advButton {
     margin-left: 15px;
+}
+
+.channel-group-name {
+	margin-bottom: 5px;
+    margin-top: 10px;
+    font-weight: bolder;
 }
 
 .channels>div>div>.channel {
@@ -1106,6 +1117,10 @@ md-dialog-content .dayParameter {
     font-size:10px;
 }
 
+.icontrol {
+	margin-bottom: 15px;
+}
+
 .icontrol .control-button {
 	min-height: 35px;
 	min-width: 35px;
@@ -1135,8 +1150,26 @@ md-dialog-content .dayParameter {
 	outline: 0;
 }
 
-.rules .disabled {
-background-color: #b8030c;
+.rules .disabled .description {
+	color: grey;
+}
+
+.rules .disabled .run-rule {
+	color: grey;
+}
+
+.rules .disabled .run-rule:hover {
+	color: grey;
+	box-shadow: none;
+	cursor: default;
+}
+
+.rules .enabled .description {
+	color: black;
+}
+
+.rules .uninitialized {
+background-color: #777;
 }
 
 .rules .idle {

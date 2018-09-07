@@ -38,6 +38,7 @@ import org.eclipse.smarthome.config.core.ConfigDescription;
 import org.eclipse.smarthome.config.core.ConfigDescriptionParameter;
 import org.eclipse.smarthome.config.core.ConfigDescriptionRegistry;
 import org.eclipse.smarthome.config.core.Configuration;
+import org.eclipse.smarthome.config.core.validation.ConfigDescriptionValidator;
 import org.eclipse.smarthome.core.common.SafeCaller;
 import org.eclipse.smarthome.core.common.ThreadPoolManager;
 import org.eclipse.smarthome.core.common.registry.Identifiable;
@@ -49,6 +50,7 @@ import org.eclipse.smarthome.core.service.ReadyMarkerFilter;
 import org.eclipse.smarthome.core.service.ReadyService;
 import org.eclipse.smarthome.core.thing.Bridge;
 import org.eclipse.smarthome.core.thing.Channel;
+import org.eclipse.smarthome.core.thing.ChannelGroupUID;
 import org.eclipse.smarthome.core.thing.ChannelUID;
 import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.ThingRegistry;
@@ -68,6 +70,10 @@ import org.eclipse.smarthome.core.thing.binding.builder.ThingStatusInfoBuilder;
 import org.eclipse.smarthome.core.thing.events.ThingEventFactory;
 import org.eclipse.smarthome.core.thing.i18n.ThingStatusInfoI18nLocalizationService;
 import org.eclipse.smarthome.core.thing.link.ItemChannelLinkRegistry;
+import org.eclipse.smarthome.core.thing.type.ChannelDefinition;
+import org.eclipse.smarthome.core.thing.type.ChannelGroupType;
+import org.eclipse.smarthome.core.thing.type.ChannelGroupTypeRegistry;
+import org.eclipse.smarthome.core.thing.type.ChannelGroupTypeUID;
 import org.eclipse.smarthome.core.thing.type.ChannelType;
 import org.eclipse.smarthome.core.thing.type.ChannelTypeRegistry;
 import org.eclipse.smarthome.core.thing.type.ChannelTypeUID;
@@ -84,7 +90,6 @@ import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
-import org.osgi.service.event.EventHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -111,13 +116,14 @@ import com.google.common.collect.SetMultimap;
  * @author Thomas Höfer - Added localization of thing status info
  * @author Christoph Weitkamp - Moved OSGI ServiceTracker from BaseThingHandler to ThingHandlerCallback
  * @author Henning Sudbrock - Consider thing type properties when migrating to new thing type
+ * @author Christoph Weitkamp - Added preconfigured ChannelGroupBuilder
  */
 @Component(immediate = true, service = { ThingTypeMigrationService.class })
 public class ThingManager implements ThingTracker, ThingTypeMigrationService, ReadyService.ReadyTracker {
 
-    private static final String FORCEREMOVE_THREADPOOL_NAME = "forceRemove";
-    private static final String THING_MANAGER_THREADPOOL_NAME = "thingManager";
-    private static final String XML_THING_TYPE = "esh.xmlThingTypes";
+    static final String FORCEREMOVE_THREADPOOL_NAME = "forceRemove";
+    static final String THING_MANAGER_THREADPOOL_NAME = "thingManager";
+    static final String XML_THING_TYPE = "esh.xmlThingTypes";
 
     private final Logger logger = LoggerFactory.getLogger(ThingManager.class);
 
@@ -139,6 +145,7 @@ public class ThingManager implements ThingTracker, ThingTypeMigrationService, Re
 
     private ThingTypeRegistry thingTypeRegistry;
     private ChannelTypeRegistry channelTypeRegistry;
+    private ChannelGroupTypeRegistry channelGroupTypeRegistry;
     private ItemChannelLinkRegistry itemChannelLinkRegistry;
 
     private ThingStatusInfoI18nLocalizationService thingStatusInfoI18nLocalizationService;
@@ -258,6 +265,14 @@ public class ThingManager implements ThingTracker, ThingTypeMigrationService, Re
         }
 
         @Override
+        public void validateConfigurationParameters(Thing thing, Map<String, Object> configurationParameters) {
+            ThingType thingType = thingTypeRegistry.getThingType(thing.getThingTypeUID());
+            if (thingType != null && thingType.getConfigDescriptionURI() != null) {
+                configDescriptionValidator.validate(configurationParameters, thingType.getConfigDescriptionURI());
+            }
+        }
+
+        @Override
         public void configurationUpdated(Thing thing) {
             initializeHandler(thing);
         }
@@ -272,15 +287,46 @@ public class ThingManager implements ThingTracker, ThingTypeMigrationService, Re
         public ChannelBuilder createChannelBuilder(ChannelUID channelUID, ChannelTypeUID channelTypeUID) {
             ChannelType channelType = channelTypeRegistry.getChannelType(channelTypeUID);
             if (channelType == null) {
-                throw new IllegalArgumentException("Channel type " + channelTypeUID + " is not known");
+                throw new IllegalArgumentException(String.format("Channel type '%s' is not known", channelTypeUID));
             }
             return ThingFactoryHelper.createChannelBuilder(channelUID, channelType, configDescriptionRegistry);
         };
 
         @Override
+        public ChannelBuilder editChannel(Thing thing, ChannelUID channelUID) {
+            Channel channel = thing.getChannel(channelUID.getId());
+            if (channel == null) {
+                throw new IllegalArgumentException(
+                        String.format("Channel '%s' does not exist for thing '%s'", channelUID, thing.getUID()));
+            }
+            return ChannelBuilder.create(channel);
+        }
+
+        @Override
+        public List<ChannelBuilder> createChannelBuilders(ChannelGroupUID channelGroupUID,
+                ChannelGroupTypeUID channelGroupTypeUID) {
+            ChannelGroupType channelGroupType = channelGroupTypeRegistry.getChannelGroupType(channelGroupTypeUID);
+            if (channelGroupType == null) {
+                throw new IllegalArgumentException(
+                        String.format("Channel group type '%s' is not known", channelGroupTypeUID));
+            }
+            List<ChannelBuilder> channelBuilders = new ArrayList<>();
+            for (ChannelDefinition channelDefinition : channelGroupType.getChannelDefinitions()) {
+                ChannelType channelType = channelTypeRegistry.getChannelType(channelDefinition.getChannelTypeUID());
+                if (channelType != null) {
+                    ChannelUID channelUID = new ChannelUID(channelGroupUID, channelDefinition.getId());
+                    channelBuilders.add(ThingFactoryHelper.createChannelBuilder(channelUID, channelType,
+                            configDescriptionRegistry));
+                }
+            }
+            return channelBuilders;
+        }
+
+        @Override
         public boolean isChannelLinked(ChannelUID channelUID) {
             return !itemChannelLinkRegistry.getLinks(channelUID).isEmpty();
         }
+
     };
 
     private ThingRegistryImpl thingRegistry;
@@ -288,6 +334,7 @@ public class ThingManager implements ThingTracker, ThingTypeMigrationService, Re
     private BundleResolver bundleResolver;
 
     private ConfigDescriptionRegistry configDescriptionRegistry;
+    private ConfigDescriptionValidator configDescriptionValidator;
 
     private final Set<Thing> things = new CopyOnWriteArraySet<>();
 
@@ -1083,6 +1130,15 @@ public class ThingManager implements ThingTracker, ThingTypeMigrationService, Re
     }
 
     @Reference
+    protected void setConfigDescriptionValidator(ConfigDescriptionValidator configDescriptionValidator) {
+        this.configDescriptionValidator = configDescriptionValidator;
+    }
+
+    protected void unsetConfigDescriptionValidator(ConfigDescriptionValidator configDescriptionValidator) {
+        this.configDescriptionValidator = null;
+    }
+
+    @Reference
     protected void setBundleResolver(BundleResolver bundleResolver) {
         this.bundleResolver = bundleResolver;
     }
@@ -1133,6 +1189,15 @@ public class ThingManager implements ThingTracker, ThingTypeMigrationService, Re
 
     protected void unsetChannelTypeRegistry(ChannelTypeRegistry channelTypeRegistry) {
         this.channelTypeRegistry = null;
+    }
+
+    @Reference
+    protected void setChannelGroupTypeRegistry(ChannelGroupTypeRegistry channelGroupTypeRegistry) {
+        this.channelGroupTypeRegistry = channelGroupTypeRegistry;
+    }
+
+    protected void unsetChannelGroupTypeRegistry(ChannelGroupTypeRegistry channelGroupTypeRegistry) {
+        this.channelGroupTypeRegistry = null;
     }
 
     @Reference

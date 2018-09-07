@@ -1,8 +1,8 @@
 angular.module('PaperUI', [//
 'PaperUI.controllers',//
-'PaperUI.controllers.control',// 
 'PaperUI.controllers.setup',//
 'PaperUI.controllers.configuration',//
+'PaperUI.control',// 
 'PaperUI.things',//
 'PaperUI.bindings',//
 'PaperUI.items',//
@@ -13,15 +13,9 @@ angular.module('PaperUI', [//
 'PaperUI.services.repositories', //
 'PaperUI.extensions',//
 'PaperUI.directive.configDescription',//
-'ngRoute', 'ngResource', 'ngMaterial', 'ngMessages', 'ngSanitize', 'ui.sortable', 'material.components.expansionPanels' ]) //
+'ngRoute', 'ngResource', 'ngMaterial', 'ngMessages', 'ngSanitize', 'material.components.expansionPanels' ]) //
 .config([ '$routeProvider', '$httpProvider', 'globalConfig', '$mdDateLocaleProvider', 'moduleConfig', 'dateTimeProvider', function($routeProvider, httpProvider, globalConfig, $mdDateLocaleProvider, moduleConfig, dateTimeProvider) {
-    $routeProvider.when('/control', {
-        templateUrl : 'partials/control/control.html',
-        controller : 'ControlPageController',
-        title : 'Control',
-        simpleHeader : true,
-        reloadOnSearch : false
-    }).when('/setup', {
+    $routeProvider.when('/setup', {
         redirectTo : '/inbox/search'
     }).when('/inbox', {
         redirectTo : '/inbox/search'

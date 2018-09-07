@@ -4,7 +4,7 @@
 	xmlns:thing="http://eclipse.org/smarthome/schemas/thing-description/v1.0.0"
 	xsi:schemaLocation="http://eclipse.org/smarthome/schemas/thing-description/v1.0.0 http://eclipse.org/smarthome/schemas/thing-description-1.0.0.xsd">
 
-	<thing-type id="extensible-thing" extensible="brightness,color,alert">
+	<thing-type id="extensible-thing" extensible="brightness,color,alert,choosy,image">
 		<label>Magic Light - Extensible</label>
 		<description>A generic light thing with extension channels</description>
 		<config-description>
@@ -103,6 +103,28 @@
 		</channels>
 	</thing-type>
 
+	<thing-type id="chatty-thing">
+		<label>Magic ChattyThing</label>
+		<description>A thing that periodically sends data.</description>
+
+		<channels>
+			<channel id="number" typeId="number">
+				<label>Number to show</label>
+			</channel>
+			<channel id="text" typeId="text">
+				<label>Text to show</label>
+			</channel>
+		</channels>
+
+		<config-description uri="thing-type:magic:chattyConfig">
+			<parameter name="interval" type="integer">
+				<label>Interval</label>
+				<description>Interval to send data in seconds. (Use 0 to disable data sending)</description>
+				<default>5</default>
+			</parameter>
+		</config-description>
+	</thing-type>
+
 	<thing-type id="firmware-update">
 		<label>Magic Firmware Updatable Thing</label>
 		<description>A thing which allows updating its firmware</description>
@@ -126,5 +148,36 @@
 			</parameter>
 		</config-description>
 
+	</thing-type>
+
+	<thing-type id="rollershutter">
+		<label>Magic Rollershutter Thing</label>
+		<description>A rollershutter</description>
+		<channels>
+			<channel typeId="rollershutter" id="rollershutter"></channel>
+		</channels>
+	</thing-type>
+
+	<thing-type id="player">
+		<label>Magic Player Thing</label>
+		<description>A media player</description>
+		<channels>
+			<channel typeId="player" id="player"></channel>
+		</channels>
+	</thing-type>
+
+	<thing-type id="image">
+		<label>Magic Image</label>
+		<description>A thing providing an image</description>
+		<channels>
+			<channel typeId="image" id="image"></channel>
+		</channels>
+		<config-description>
+			<parameter name="source" type="text" required="true">
+				<label>Image URL</label>
+				<description>The URL the image will be loaded from</description>
+				<context>url</context>
+			</parameter>
+		</config-description>
 	</thing-type>
 </thing:thing-descriptions>

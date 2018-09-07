@@ -100,13 +100,15 @@ angular.module('PaperUI.things') //
             $mdDialog.hide();
         });
     }
-}).controller('LinkChannelDialogController', function($rootScope, $scope, $mdDialog, $filter, toastService, itemRepository, itemService, sharedProperties, params) {
+}).controller('LinkChannelDialogController', function($rootScope, $scope, $mdDialog, $filter, toastService, itemRepository, itemService, profileTypeRepository, sharedProperties, params) {
     $scope.itemName;
     $scope.linkedItems = params.linkedItems;
     $scope.advancedMode = $rootScope.advancedMode;
     $scope.category = params.category;
     $scope.itemFormVisible = false;
     $scope.itemsList = [];
+    $scope.channel = params.channel;
+    $scope.linkModel = params.link;
 
     var createAcceptedItemTypes = function(paramItemTypes) {
         var acceptedItemTypes = [];
@@ -118,35 +120,22 @@ angular.module('PaperUI.things') //
 
         angular.forEach(paramItemTypes, function(itemType) {
             addToAcceptedItemTypes(itemType);
-            if (itemType == "Color") {
-                addToAcceptedItemTypes("Switch");
-                addToAcceptedItemTypes("Dimmer");
-            } else if (itemType == "Dimmer") {
-                addToAcceptedItemTypes("Switch");
+            if (itemType == 'Color') {
+                addToAcceptedItemTypes('Switch');
+                addToAcceptedItemTypes('Dimmer');
+            } else if (itemType == 'Dimmer') {
+                addToAcceptedItemTypes('Switch');
+            } else if (itemType.indexOf('Number:') === 0) {
+                addToAcceptedItemTypes('Number');
             }
 
-        })
+        });
 
         return acceptedItemTypes;
     }
-    $scope.acceptedItemTypes = createAcceptedItemTypes(params.acceptedItemTypes);
 
-    itemRepository.getAll(function(items) {
-        $scope.items = items;
-        $scope.itemsList = $.grep($scope.items, function(item) {
-            return $scope.acceptedItemTypes.indexOf(item.type) != -1;
-        });
-        $scope.itemsList = $.grep($scope.itemsList, function(item) {
-            return $scope.linkedItems.indexOf(item.name) == -1;
-        });
-        if (params.allowNewItemCreation) {
-            $scope.itemsList.push({
-                name : "_createNew",
-                type : $scope.acceptedItemType
-            });
-        }
-        $scope.itemsList = $filter('orderBy')($scope.itemsList, "name");
-    });
+    activate();
+
     $scope.checkCreateOption = function() {
         if ($scope.itemName == "_createNew") {
             $scope.itemFormVisible = true;
@@ -184,10 +173,50 @@ angular.module('PaperUI.things') //
             $scope.close();
         }
     });
+    $scope.$watch(function watchFunction() {
+        return $scope.linkModel.configuration['profile'];
+    }, function(newValue) {
+        activate();
+    });
 
     if (params.preSelectCreate) {
         $scope.itemName = "_createNew";
         $scope.checkCreateOption();
+    }
+
+    function activate() {
+        profileTypeRepository.getAll().then(function() {
+            var profileTypeUid = $scope.linkModel.configuration['profile'];
+            if (profileTypeUid === undefined || profileTypeUid === "system:default") {
+                $scope.acceptedItemTypes = createAcceptedItemTypes(params.acceptedItemTypes);
+            } else {
+                profile = profileTypeRepository.find(function(element) {
+                    return element.uid == profileTypeUid;
+                });
+                $scope.acceptedItemTypes = profile.supportedItemTypes;
+            }
+
+            itemRepository.getAll(function(items) {
+                $scope.items = items;
+                if ($scope.acceptedItemTypes.length > 0) {
+                    $scope.itemsList = $.grep($scope.items, function(item) {
+                        return $scope.acceptedItemTypes.indexOf(item.type) != -1;
+                    });
+                } else {
+                    $scope.itemsList = $scope.items;
+                }
+                $scope.itemsList = $.grep($scope.itemsList, function(item) {
+                    return $scope.linkedItems.indexOf(item.name) == -1;
+                });
+                if (params.allowNewItemCreation) {
+                    $scope.itemsList.push({
+                        name : "_createNew",
+                        type : $scope.acceptedItemType
+                    });
+                }
+                $scope.itemsList = $filter('orderBy')($scope.itemsList, "name");
+            });
+        });
     }
 }).controller('UnlinkChannelDialogController', function($scope, $mdDialog, toastService, linkService, itemName) {
     $scope.itemName = itemName;

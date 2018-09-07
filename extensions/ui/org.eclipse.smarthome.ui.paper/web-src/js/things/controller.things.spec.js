@@ -101,6 +101,7 @@ describe('module PaperUI.things', function() {
 
             scope.advancedMode = true;
             spyOn(mdDialog, 'show').and.returnValue(deferred.promise);
+
             scope.enableChannel(0, 'T', event, true);
             expect(mdDialog.show).toHaveBeenCalled();
         });
@@ -187,25 +188,41 @@ describe('module PaperUI.things', function() {
         });
     });
     describe('tests for LinkChannelDialogController', function() {
-        var LinkChannelDialogController, scope, itemService, deferred;
+        var LinkChannelDialogController, scope, itemService, deferred, profileTypeRepository, prom;
         beforeEach(inject(function($injector, $rootScope, $controller, $mdDialog, $q) {
             scope = $rootScope.$new();
             $rootScope.data.items = [ {
                 type : 'T'
             } ];
+            var linkConfig = {
+                profile : "system:default"
+            };
+            var linkModel = {
+                configuration : linkConfig
+            };
             var itemRepository = $injector.get('itemRepository');
             spyOn(itemRepository, 'getAll').and.callFake(function(callback) {
                 return callback([ {
                     type : 'T'
                 } ]);
             });
+
+            profileTypeRepository = $injector.get('profileTypeRepository');
+            spyOn(profileTypeRepository, 'getAll').and.callFake(function() {
+                var deferred = $q.defer();
+                deferred.resolve();
+                prom = deferred.promise;
+                return prom;
+            });
+
             LinkChannelDialogController = $controller('LinkChannelDialogController', {
                 '$scope' : scope,
                 'params' : {
                     'linkedItems' : [],
                     'acceptedItemTypes' : [ 'T' ],
                     'category' : '',
-                    allowNewItemCreation : true
+                    allowNewItemCreation : true,
+                    'link' : linkModel
                 }
             });
             mdDialog = $mdDialog;
@@ -216,19 +233,21 @@ describe('module PaperUI.things', function() {
             expect(LinkChannelDialogController).toBeDefined();
         });
         it('should fetch items', function() {
-            expect(scope.items.length).toEqual(1);
-            expect(scope.itemsList.length).toEqual(2);
+            prom.then(function() {
+                expect(scope.items.length).toEqual(1);
+                expect(scope.itemsList.length).toEqual(2);
 
-            var createNewItem = {
-                name : '_createNew',
-                type : undefined
-            }
+                var createNewItem = {
+                    name : '_createNew',
+                    type : undefined
+                }
 
-            var itemTypeT = {
-                type : 'T'
-            }
-            expect(scope.itemsList).toContain(jasmine.objectContaining(createNewItem));
-            expect(scope.itemsList).toContain(jasmine.objectContaining(itemTypeT));
+                var itemTypeT = {
+                    type : 'T'
+                }
+                expect(scope.itemsList).toContain(jasmine.objectContaining(createNewItem));
+                expect(scope.itemsList).toContain(jasmine.objectContaining(itemTypeT));
+            });
         });
         it('should toggle items form', function() {
             scope.checkCreateOption();

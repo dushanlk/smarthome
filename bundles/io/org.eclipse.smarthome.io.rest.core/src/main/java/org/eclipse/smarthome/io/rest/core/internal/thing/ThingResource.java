@@ -78,9 +78,9 @@ import org.eclipse.smarthome.core.thing.firmware.FirmwareUpdateService;
 import org.eclipse.smarthome.core.thing.firmware.dto.FirmwareDTO;
 import org.eclipse.smarthome.core.thing.firmware.dto.FirmwareStatusDTO;
 import org.eclipse.smarthome.core.thing.i18n.ThingStatusInfoI18nLocalizationService;
-import org.eclipse.smarthome.core.thing.link.ItemChannelLink;
 import org.eclipse.smarthome.core.thing.link.ItemChannelLinkRegistry;
 import org.eclipse.smarthome.core.thing.link.ManagedItemChannelLinkProvider;
+import org.eclipse.smarthome.core.thing.type.BridgeType;
 import org.eclipse.smarthome.core.thing.type.ChannelType;
 import org.eclipse.smarthome.core.thing.type.ChannelTypeRegistry;
 import org.eclipse.smarthome.core.thing.type.ChannelTypeUID;
@@ -88,7 +88,7 @@ import org.eclipse.smarthome.core.thing.type.ThingType;
 import org.eclipse.smarthome.core.thing.type.ThingTypeRegistry;
 import org.eclipse.smarthome.core.thing.util.ThingHelper;
 import org.eclipse.smarthome.io.rest.JSONResponse;
-import org.eclipse.smarthome.io.rest.LocaleUtil;
+import org.eclipse.smarthome.io.rest.LocaleService;
 import org.eclipse.smarthome.io.rest.RESTResource;
 import org.eclipse.smarthome.io.rest.Stream2JSONInputStream;
 import org.eclipse.smarthome.io.rest.core.thing.EnrichedThingDTO;
@@ -124,7 +124,7 @@ import io.swagger.annotations.ApiResponses;
  */
 @Path(ThingResource.PATH_THINGS)
 @Api(value = ThingResource.PATH_THINGS)
-@Component(service = { RESTResource.class, ThingResource.class })
+@Component
 public class ThingResource implements RESTResource {
 
     private final Logger logger = LoggerFactory.getLogger(ThingResource.class);
@@ -147,8 +147,19 @@ public class ThingResource implements RESTResource {
     private FirmwareUpdateService firmwareUpdateService;
     private FirmwareRegistry firmwareRegistry;
 
+    private LocaleService localeService;
+
     @Context
     private UriInfo uriInfo;
+
+    @Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC)
+    protected void setLocaleService(LocaleService localeService) {
+        this.localeService = localeService;
+    }
+
+    protected void unsetLocaleService(LocaleService localeService) {
+        this.localeService = null;
+    }
 
     /**
      * create a new Thing
@@ -165,7 +176,7 @@ public class ThingResource implements RESTResource {
             @ApiResponse(code = 409, message = "A thing with the same uid already exists.") })
     public Response create(@HeaderParam(HttpHeaders.ACCEPT_LANGUAGE) @ApiParam(value = "language") String language,
             @ApiParam(value = "thing data", required = true) ThingDTO thingBean) {
-        final Locale locale = LocaleUtil.getLocale(language);
+        final Locale locale = localeService.getLocale(language);
 
         ThingUID thingUID = thingBean.UID == null ? null : new ThingUID(thingBean.UID);
         ThingTypeUID thingTypeUID = new ThingTypeUID(thingBean.thingTypeUID);
@@ -215,7 +226,7 @@ public class ThingResource implements RESTResource {
             // we create the Thing exactly the way we received it, i.e. we
             // cannot take its thing type into account for automatically
             // populating channels and properties.
-            thing = ThingDTOMapper.map(thingBean);
+            thing = ThingDTOMapper.map(thingBean, thingTypeRegistry.getThingType(thingTypeUID) instanceof BridgeType);
         } else {
             return getThingResponse(Status.BAD_REQUEST, thing, locale,
                     "A UID must be provided, since no binding can create the thing!");
@@ -232,7 +243,7 @@ public class ThingResource implements RESTResource {
     @ApiResponses(value = {
             @ApiResponse(code = 200, message = "OK", response = EnrichedThingDTO.class, responseContainer = "Set") })
     public Response getAll(@HeaderParam(HttpHeaders.ACCEPT_LANGUAGE) @ApiParam(value = "language") String language) {
-        final Locale locale = LocaleUtil.getLocale(language);
+        final Locale locale = localeService.getLocale(language);
 
         Stream<EnrichedThingDTO> thingStream = thingRegistry.stream().map(t -> convertToEnrichedThingDTO(t, locale))
                 .distinct();
@@ -248,7 +259,7 @@ public class ThingResource implements RESTResource {
             @ApiResponse(code = 404, message = "Thing not found.") })
     public Response getByUID(@HeaderParam(HttpHeaders.ACCEPT_LANGUAGE) @ApiParam(value = "language") String language,
             @PathParam("thingUID") @ApiParam(value = "thingUID") String thingUID) {
-        final Locale locale = LocaleUtil.getLocale(language);
+        final Locale locale = localeService.getLocale(language);
 
         Thing thing = thingRegistry.get((new ThingUID(thingUID)));
 
@@ -280,7 +291,7 @@ public class ThingResource implements RESTResource {
     public Response remove(@HeaderParam(HttpHeaders.ACCEPT_LANGUAGE) @ApiParam(value = "language") String language,
             @PathParam("thingUID") @ApiParam(value = "thingUID") String thingUID,
             @DefaultValue("false") @QueryParam("force") @ApiParam(value = "force") boolean force) {
-        final Locale locale = LocaleUtil.getLocale(language);
+        final Locale locale = localeService.getLocale(language);
 
         ThingUID thingUIDObject = new ThingUID(thingUID);
 
@@ -336,7 +347,7 @@ public class ThingResource implements RESTResource {
     public Response update(@HeaderParam(HttpHeaders.ACCEPT_LANGUAGE) @ApiParam(value = "language") String language,
             @PathParam("thingUID") @ApiParam(value = "thingUID") String thingUID,
             @ApiParam(value = "thing", required = true) ThingDTO thingBean) throws IOException {
-        final Locale locale = LocaleUtil.getLocale(language);
+        final Locale locale = localeService.getLocale(language);
 
         ThingUID thingUIDObject = new ThingUID(thingUID);
 
@@ -396,7 +407,7 @@ public class ThingResource implements RESTResource {
             @PathParam("thingUID") @ApiParam(value = "thing") String thingUID,
             @ApiParam(value = "configuration parameters") Map<String, Object> configurationParameters)
             throws IOException {
-        final Locale locale = LocaleUtil.getLocale(language);
+        final Locale locale = localeService.getLocale(language);
 
         ThingUID thingUIDObject = new ThingUID(thingUID);
 
@@ -441,6 +452,7 @@ public class ThingResource implements RESTResource {
     @GET
     @RolesAllowed({ Role.USER, Role.ADMIN })
     @Path("/{thingUID}/status")
+    @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(value = "Gets thing's status.")
     @ApiResponses(value = { @ApiResponse(code = 200, message = "OK", response = String.class),
             @ApiResponse(code = 404, message = "Thing not found.") })
@@ -457,13 +469,14 @@ public class ThingResource implements RESTResource {
         }
 
         ThingStatusInfo thingStatusInfo = thingStatusInfoI18nLocalizationService.getLocalizedThingStatusInfo(thing,
-                LocaleUtil.getLocale(language));
-        return Response.ok(null, MediaType.TEXT_PLAIN).entity(thingStatusInfo).build();
+                localeService.getLocale(language));
+        return Response.ok().entity(thingStatusInfo).build();
     }
 
     @GET
     @RolesAllowed({ Role.USER, Role.ADMIN })
     @Path("/{thingUID}/config/status")
+    @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(value = "Gets thing's config status.")
     @ApiResponses(value = { @ApiResponse(code = 200, message = "OK", response = String.class),
             @ApiResponse(code = 404, message = "Thing not found.") })
@@ -479,11 +492,11 @@ public class ThingResource implements RESTResource {
             return getThingNotFoundResponse(thingUID);
         }
 
-        ConfigStatusInfo info = configStatusService.getConfigStatus(thingUID, LocaleUtil.getLocale(language));
+        ConfigStatusInfo info = configStatusService.getConfigStatus(thingUID, localeService.getLocale(language));
         if (info != null) {
-            return Response.ok(null, MediaType.TEXT_PLAIN).entity(info.getConfigStatusMessages()).build();
+            return Response.ok().entity(info.getConfigStatusMessages()).build();
         }
-        return Response.ok(null, MediaType.TEXT_PLAIN).entity(Collections.EMPTY_SET).build();
+        return Response.ok().entity(Collections.EMPTY_SET).build();
     }
 
     @PUT
@@ -513,7 +526,7 @@ public class ThingResource implements RESTResource {
 
         ThingUID uid = thing.getUID();
         try {
-            firmwareUpdateService.updateFirmware(uid, firmwareVersion, LocaleUtil.getLocale(language));
+            firmwareUpdateService.updateFirmware(uid, firmwareVersion, localeService.getLocale(language));
         } catch (IllegalArgumentException | IllegalStateException ex) {
             return JSONResponse.createResponse(Status.BAD_REQUEST, null,
                     "Firmware update preconditions not satisfied.");
@@ -554,7 +567,7 @@ public class ThingResource implements RESTResource {
                     uriInfo.getPath(), thingUID);
             return getThingNotFoundResponse(thingUID);
         }
-        Collection<Firmware> firmwares = firmwareRegistry.getFirmwares(thing, LocaleUtil.getLocale(language));
+        Collection<Firmware> firmwares = firmwareRegistry.getFirmwares(thing, localeService.getLocale(language));
 
         if (firmwares.isEmpty()) {
             return Response.status(Status.NO_CONTENT).build();
@@ -714,27 +727,6 @@ public class ThingResource implements RESTResource {
         return linkedItemsMap;
     }
 
-    private Channel findChannel(String channelId, Thing thing) {
-        for (Channel channel : thing.getChannels()) {
-            if (channel.getUID().getId().equals(channelId)) {
-                return channel;
-            }
-        }
-        return null;
-    }
-
-    private void unlinkChannelIfAlreadyLinked(ChannelUID channelUID) {
-        Collection<ItemChannelLink> links = managedItemChannelLinkProvider.getAll();
-        for (ItemChannelLink link : links) {
-            if (link.getLinkedUID().equals(channelUID)) {
-                logger.debug(
-                        "Channel '{}' is already linked to item '{}' and will be unlinked before it will be linked to the new item.",
-                        channelUID, link.getItemName());
-                managedItemChannelLinkProvider.remove(link.getUID());
-            }
-        }
-    }
-
     public static void updateConfiguration(Thing thing, Configuration configuration) {
         for (String parameterName : configuration.keySet()) {
             thing.getConfiguration().put(parameterName, configuration.get(parameterName));
@@ -889,7 +881,7 @@ public class ThingResource implements RESTResource {
                 && managedItemChannelLinkProvider != null && managedItemProvider != null && managedThingProvider != null
                 && thingRegistry != null && configStatusService != null && configDescRegistry != null
                 && thingTypeRegistry != null && channelTypeRegistry != null && firmwareUpdateService != null
-                && thingStatusInfoI18nLocalizationService != null && firmwareRegistry != null;
+                && thingStatusInfoI18nLocalizationService != null && firmwareRegistry != null && localeService != null;
     }
 
 }

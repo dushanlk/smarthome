@@ -29,6 +29,7 @@ import org.eclipse.smarthome.io.transport.serial.UnsupportedCommOperationExcepti
  * Specific serial port implementation.
  *
  * @author Markus Rathgeb - Initial contribution
+ * @author Kai Kreuzer - added further methods
  */
 @NonNullByDefault
 public class SerialPortImpl implements SerialPort {
@@ -55,7 +56,7 @@ public class SerialPortImpl implements SerialPort {
         try {
             sp.setSerialPortParams(baudrate, dataBits, stopBits, parity);
         } catch (javax.comm.UnsupportedCommOperationException ex) {
-            throw new UnsupportedCommOperationException();
+            throw new UnsupportedCommOperationException(ex);
         }
     }
 
@@ -93,6 +94,31 @@ public class SerialPortImpl implements SerialPort {
     }
 
     @Override
+    public void notifyOnBreakInterrupt(boolean enable) {
+        sp.notifyOnBreakInterrupt(enable);
+    }
+
+    @Override
+    public void notifyOnFramingError(boolean enable) {
+        sp.notifyOnFramingError(enable);
+    }
+
+    @Override
+    public void notifyOnOverrunError(boolean enable) {
+        sp.notifyOnOverrunError(enable);
+    }
+
+    @Override
+    public void notifyOnParityError(boolean enable) {
+        sp.notifyOnParityError(enable);
+    }
+
+    @Override
+    public void setRTS(boolean enable) {
+        sp.setRTS(enable);
+    }
+
+    @Override
     public void enableReceiveTimeout(int timeout) throws UnsupportedCommOperationException {
         if (timeout < 0) {
             throw new IllegalArgumentException(String.format("timeout must be non negative (is: %d)", timeout));
@@ -100,7 +126,35 @@ public class SerialPortImpl implements SerialPort {
         try {
             sp.enableReceiveTimeout(timeout);
         } catch (javax.comm.UnsupportedCommOperationException ex) {
-            throw new UnsupportedCommOperationException();
+            throw new UnsupportedCommOperationException(ex);
+        }
+    }
+
+    @Override
+    public void disableReceiveTimeout() {
+        sp.disableReceiveTimeout();
+    }
+
+    @Override
+    public String getName() {
+        return sp.getName();
+    }
+
+    @Override
+    public void setFlowControlMode(int flowcontrolRtsctsOut) throws UnsupportedCommOperationException {
+        try {
+            sp.setFlowControlMode(flowcontrolRtsctsOut);
+        } catch (javax.comm.UnsupportedCommOperationException e) {
+            throw new UnsupportedCommOperationException(e);
+        }
+    }
+
+    @Override
+    public void enableReceiveThreshold(int i) throws UnsupportedCommOperationException {
+        try {
+            sp.enableReceiveThreshold(i);
+        } catch (javax.comm.UnsupportedCommOperationException e) {
+            throw new UnsupportedCommOperationException(e);
         }
     }
 

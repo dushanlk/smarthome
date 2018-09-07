@@ -33,6 +33,7 @@ import org.eclipse.smarthome.core.library.types.OnOffType;
 import org.eclipse.smarthome.core.library.types.QuantityType;
 import org.eclipse.smarthome.core.library.unit.MetricPrefix;
 import org.eclipse.smarthome.core.library.unit.SIUnits;
+import org.eclipse.smarthome.core.library.unit.SmartHomeUnits;
 import org.eclipse.smarthome.core.types.State;
 import org.eclipse.smarthome.model.script.ScriptServiceUtil;
 import org.eclipse.smarthome.test.java.JavaOSGiTest;
@@ -114,7 +115,7 @@ public class ScriptEngineOSGiTest extends JavaOSGiTest {
         State numberState = itemRegistry.get(NUMBER_ITEM_TEMPERATURE).getState();
         assertNotNull(numberState);
         assertEquals("org.eclipse.smarthome.core.library.types.QuantityType", numberState.getClass().getName());
-        assertEquals("20.0 ℃", numberState.toString());
+        assertEquals("20.0 °C", numberState.toString());
     }
 
     @SuppressWarnings("null")
@@ -286,6 +287,19 @@ public class ScriptEngineOSGiTest extends JavaOSGiTest {
     @Test
     public void testToUnit_QuantityType() throws ScriptParsingException, ScriptExecutionException {
         assertThat(runScript("20|°C.toUnit(\"°F\")"), is(new QuantityType<>("68 °F")));
+    }
+
+    @Test
+    public void testToUnit_QuantityType2() throws ScriptParsingException, ScriptExecutionException {
+        assertThat(runScript("new QuantityType(20, CELSIUS).toUnit('°F').doubleValue"), is(Double.valueOf(68)));
+        assertThat(runScript("new QuantityType(68, FAHRENHEIT).toUnit('°C').doubleValue"), is(Double.valueOf(20)));
+    }
+
+    @Test
+    public void testToUnit_QuantityType3() throws ScriptParsingException, ScriptExecutionException {
+        assertThat(runScript("new QuantityType(1, KELVIN)"), is(new QuantityType<>(1, SmartHomeUnits.KELVIN)));
+        assertThat(runScript("new QuantityType(1, MICRO(KELVIN))"),
+                is(new QuantityType<>(1, MetricPrefix.MICRO(SmartHomeUnits.KELVIN))));
     }
 
     @Test

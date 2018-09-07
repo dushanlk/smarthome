@@ -19,6 +19,9 @@ import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang.StringUtils;
+import org.eclipse.emf.ecore.EObject;
+import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.model.core.EventType;
 import org.eclipse.smarthome.model.core.ModelRepository;
 import org.eclipse.smarthome.model.core.ModelRepositoryChangeListener;
@@ -37,6 +40,7 @@ import org.slf4j.LoggerFactory;
  * @author Kai Kreuzer - Initial contribution and API
  *
  */
+@NonNullByDefault
 @Component(service = SitemapProvider.class)
 public class SitemapProviderImpl implements SitemapProvider, ModelRepositoryChangeListener {
 
@@ -45,7 +49,7 @@ public class SitemapProviderImpl implements SitemapProvider, ModelRepositoryChan
 
     private final Logger logger = LoggerFactory.getLogger(SitemapProviderImpl.class);
 
-    private ModelRepository modelRepo = null;
+    private @NonNullByDefault({}) ModelRepository modelRepo;
 
     private final Map<String, Sitemap> sitemapModelCache = new ConcurrentHashMap<>();
 
@@ -75,7 +79,7 @@ public class SitemapProviderImpl implements SitemapProvider, ModelRepositoryChan
     }
 
     @Override
-    public Sitemap getSitemap(String sitemapName) {
+    public @Nullable Sitemap getSitemap(String sitemapName) {
         String filename = sitemapName + SITEMAP_FILEEXT;
         Sitemap sitemap = sitemapModelCache.get(filename);
         if (sitemap != null) {
@@ -103,7 +107,11 @@ public class SitemapProviderImpl implements SitemapProvider, ModelRepositoryChan
             if (type == EventType.REMOVED) {
                 sitemapModelCache.remove(modelName);
             } else {
-                sitemapModelCache.put(modelName, (Sitemap) modelRepo.getModel(modelName));
+                EObject sitemap = modelRepo.getModel(modelName);
+                // if the sitemap file is empty it will not be in the repo and thus there is no need to cache it here
+                if (sitemap instanceof Sitemap) {
+                    sitemapModelCache.put(modelName, (Sitemap) sitemap);
+                }
             }
         }
         for (ModelRepositoryChangeListener listener : modelChangeListeners) {

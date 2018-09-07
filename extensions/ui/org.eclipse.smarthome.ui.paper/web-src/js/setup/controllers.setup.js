@@ -18,7 +18,7 @@ angular.module('PaperUI.controllers.setup', []).controller('SetupPageController'
             if ($scope.thingTypes[key]) {
                 return $scope.thingTypes[key].label;
             } else {
-                return "Unkown device";
+                return "Unknown device";
             }
         } else {
             thingTypeRepository.setDirty(false);
@@ -175,6 +175,12 @@ angular.module('PaperUI.controllers.setup', []).controller('SetupPageController'
     };
 
     bindingRepository.getAll();
+
+    $scope.getSupportedBindingIdsSortedByName = function() {
+        return $scope.supportedBindings.sort(function(b1, b2) {
+            return $scope.getBindingById(b1).name.localeCompare($scope.getBindingById(b2).name);
+        });
+    }
 
     $scope.getBindingById = function(bindingId) {
         for (var i = 0; i < $rootScope.data.bindings.length; i++) {

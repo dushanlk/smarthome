@@ -63,7 +63,6 @@ public class TradfriLightData extends TradfriDeviceData {
         return this;
     }
 
-    @SuppressWarnings("unused")
     public int getTransitionTime() {
         JsonElement transitionTime = attributes.get(TRANSITION_TIME);
         if (transitionTime != null) {
@@ -124,7 +123,7 @@ public class TradfriLightData extends TradfriDeviceData {
     public boolean getOnOffState() {
         JsonElement onOff = attributes.get(ONOFF);
         if (onOff != null) {
-            return attributes.get(ONOFF).getAsInt() == 1;
+            return onOff.getAsInt() == 1;
         } else {
             return false;
         }

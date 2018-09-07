@@ -44,11 +44,12 @@ import org.eclipse.smarthome.core.thing.type.BridgeType;
 import org.eclipse.smarthome.core.thing.type.ChannelDefinition;
 import org.eclipse.smarthome.core.thing.type.ChannelGroupDefinition;
 import org.eclipse.smarthome.core.thing.type.ChannelGroupType;
+import org.eclipse.smarthome.core.thing.type.ChannelGroupTypeRegistry;
 import org.eclipse.smarthome.core.thing.type.ChannelType;
 import org.eclipse.smarthome.core.thing.type.ChannelTypeRegistry;
 import org.eclipse.smarthome.core.thing.type.ThingType;
 import org.eclipse.smarthome.core.thing.type.ThingTypeRegistry;
-import org.eclipse.smarthome.io.rest.LocaleUtil;
+import org.eclipse.smarthome.io.rest.LocaleService;
 import org.eclipse.smarthome.io.rest.RESTResource;
 import org.eclipse.smarthome.io.rest.Stream2JSONInputStream;
 import org.osgi.service.component.annotations.Component;
@@ -78,7 +79,7 @@ import io.swagger.annotations.ApiResponses;
  */
 @Path(ThingTypeResource.PATH_THINGS_TYPES)
 @Api(value = ThingTypeResource.PATH_THINGS_TYPES)
-@Component(service = { RESTResource.class, ThingTypeResource.class })
+@Component
 public class ThingTypeResource implements RESTResource {
 
     /** The URI path to this resource */
@@ -89,6 +90,9 @@ public class ThingTypeResource implements RESTResource {
     private ThingTypeRegistry thingTypeRegistry;
     private ConfigDescriptionRegistry configDescriptionRegistry;
     private ChannelTypeRegistry channelTypeRegistry;
+    private ChannelGroupTypeRegistry channelGroupTypeRegistry;
+
+    private LocaleService localeService;
 
     @Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC)
     protected void setThingTypeRegistry(ThingTypeRegistry thingTypeRegistry) {
@@ -117,6 +121,24 @@ public class ThingTypeResource implements RESTResource {
         this.channelTypeRegistry = null;
     }
 
+    @Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC)
+    protected void setChannelGroupTypeRegistry(ChannelGroupTypeRegistry channelGroupTypeRegistry) {
+        this.channelGroupTypeRegistry = channelGroupTypeRegistry;
+    }
+
+    protected void unsetChannelGroupTypeRegistry(ChannelGroupTypeRegistry channelGroupTypeRegistry) {
+        this.channelGroupTypeRegistry = null;
+    }
+
+    @Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC)
+    protected void setLocaleService(LocaleService localeService) {
+        this.localeService = localeService;
+    }
+
+    protected void unsetLocaleService(LocaleService localeService) {
+        this.localeService = null;
+    }
+
     @GET
     @RolesAllowed({ Role.USER })
     @Produces(MediaType.APPLICATION_JSON)
@@ -124,7 +146,7 @@ public class ThingTypeResource implements RESTResource {
     @ApiResponses(value = @ApiResponse(code = 200, message = "OK", response = StrippedThingTypeDTO.class, responseContainer = "Set"))
     public Response getAll(
             @HeaderParam(HttpHeaders.ACCEPT_LANGUAGE) @ApiParam(value = HttpHeaders.ACCEPT_LANGUAGE) String language) {
-        Locale locale = LocaleUtil.getLocale(language);
+        Locale locale = localeService.getLocale(language);
         Stream<StrippedThingTypeDTO> typeStream = thingTypeRegistry.getThingTypes(locale).stream()
                 .map(t -> convertToStrippedThingTypeDTO(t, locale));
         return Response.ok(new Stream2JSONInputStream(typeStream)).build();
@@ -140,7 +162,7 @@ public class ThingTypeResource implements RESTResource {
             @ApiResponse(code = 404, message = "No content") })
     public Response getByUID(@PathParam("thingTypeUID") @ApiParam(value = "thingTypeUID") String thingTypeUID,
             @HeaderParam(HttpHeaders.ACCEPT_LANGUAGE) @ApiParam(value = HttpHeaders.ACCEPT_LANGUAGE) String language) {
-        Locale locale = LocaleUtil.getLocale(language);
+        Locale locale = localeService.getLocale(language);
         ThingType thingType = thingTypeRegistry.getThingType(new ThingTypeUID(thingTypeUID), locale);
         if (thingType != null) {
             return Response.ok(convertToThingTypeDTO(thingType, locale)).build();
@@ -188,7 +210,7 @@ public class ThingTypeResource implements RESTResource {
         List<ChannelGroupDefinitionDTO> channelGroupDefinitionDTOs = new ArrayList<>();
         for (ChannelGroupDefinition channelGroupDefinition : channelGroupDefinitions) {
             String id = channelGroupDefinition.getId();
-            ChannelGroupType channelGroupType = channelTypeRegistry
+            ChannelGroupType channelGroupType = channelGroupTypeRegistry
                     .getChannelGroupType(channelGroupDefinition.getTypeUID(), locale);
 
             // Default to the channelGroupDefinition label to override the
@@ -261,6 +283,7 @@ public class ThingTypeResource implements RESTResource {
 
     @Override
     public boolean isSatisfied() {
-        return thingTypeRegistry != null && configDescriptionRegistry != null && channelTypeRegistry != null;
+        return thingTypeRegistry != null && configDescriptionRegistry != null && channelTypeRegistry != null
+                && channelGroupTypeRegistry != null && localeService != null;
     }
 }

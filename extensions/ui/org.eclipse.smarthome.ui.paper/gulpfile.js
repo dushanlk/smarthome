@@ -11,6 +11,7 @@ var angularFilesort = require('gulp-angular-filesort'),
     uglify = require('gulp-uglify'),
     inject = require('gulp-inject'),
     util = require('gulp-util'),
+    merge = require('merge-stream'),
     Server = require('karma').Server;
 var isDevelopment = !!util.env.development;
 var noMinify = util.env.noMinify
@@ -58,6 +59,10 @@ var paths = {
             './web-src/js/extensions/controller*.js',
             './web-src/js/rules/controller*.js',
             './web-src/js/firmware/controller*.js',
+            './web-src/js/control/control-module.js',
+            './web-src/js/control/route-config.js',
+            './web-src/js/control/service*.js',
+            './web-src/js/control/**/component*.js',
             './web-src/js/control/controller*.js',
             './web-src/js/setup/controller*.js',
             './web-src/js/**/directive*.js',
@@ -94,11 +99,10 @@ var paths = {
     ],
     JQUI: [{
         'src' : [
-             './node_modules/jquery-ui/ui/data.js',
-             './node_modules/jquery-ui/ui/scroll-parent.js',
+             './node_modules/jquery-ui/ui/core.js',
              './node_modules/jquery-ui/ui/widget.js',
-             './node_modules/jquery-ui/ui/widgets/mouse.js',
-             './node_modules/jquery-ui/ui/widgets/sortable.js',
+             './node_modules/jquery-ui/ui/mouse.js',
+             './node_modules/jquery-ui/ui/sortable.js',
         ],
         'name': 'jquery-ui.js'
     }],
@@ -142,17 +146,19 @@ gulp.task('copyJSLibs', function () {
 });
 
 gulp.task('copyJQUI', function() {
-    return paths.JQUI.forEach(function (obj) {
-        return gulp.src(obj.src)
-            //.pipe(angularFilesort())
+    var streams = merge();
+    paths.JQUI.forEach(function (obj) {
+        streams.add(gulp.src(obj.src)
             .pipe(concat(obj.name))
             .pipe(rename(function (path) {
                 path.basename += '.min';
                 return path;
             }))
             .pipe(uglify())
-            .pipe(gulp.dest('./web/js'));
+            .pipe(gulp.dest('./web/js')));
     });
+
+    return streams;
 });
 
 gulp.task('copyJSMisc', function () {
@@ -176,7 +182,8 @@ gulp.task('copyFontLibs', function () {
 });
 
 gulp.task('concat', function () {
-    return paths.concat.forEach(function (obj) {
+    var streams = merge();
+    paths.concat.forEach(function (obj) {
         var result = gulp.src(obj.src)
             .pipe(angularFilesort())
             .pipe(concat(obj.name))
@@ -190,8 +197,10 @@ gulp.task('concat', function () {
         }
         result = result.pipe(gulp.dest('./web/js'));
             
-        return result;
+        streams.add(result);
     });
+
+    return streams;
 });
 
 gulp.task('clean', function () {
@@ -222,7 +231,8 @@ gulp.task('serve', ['test'], function () {
 
 
 gulp.task('inject', ['build'], function () {
-   var target = gulp.src('./web/index.html');
+   var target = gulp.src('./web-src/index.html.template').pipe(rename('index.html'));
+
    // It's not necessary to read the files (will speed up things), we're only after their paths:
    var files;
    console.log("MODE: " + (isDevelopment ? "DEV" : "PROD"));
@@ -258,6 +268,10 @@ gulp.task('inject', ['build'], function () {
                      './web-src/js/extensions/controller*.js',
                      './web-src/js/rules/controller*.js',
                      './web-src/js/firmware/controller*.js',
+                     './web-src/js/control/control-module.js',
+                     './web-src/js/control/route-config.js',
+                     './web-src/js/control/service*.js',
+                     './web-src/js/control/**/component*.js',
                      './web-src/js/control/controller*.js',
                      './web-src/js/setup/controller*.js',
                      './web-src/js/**/directive*.js',
@@ -285,7 +299,7 @@ gulp.task('inject', ['build'], function () {
             return '<script src="' + newPath  + '"></script>';
         }
     }))
-      .pipe(isDevelopment ? gulp.dest('./web-src'):gulp.dest('./web'));
+      .pipe(isDevelopment ? gulp.dest('./web-src') : gulp.dest('./web'));
   });
 
 gulp.task('test',['inject'], function (done) {

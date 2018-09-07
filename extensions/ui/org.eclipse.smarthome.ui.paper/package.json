@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "install": "node node_modules/openlayers/tasks/build.js openlayers-esh.json node_modules/openlayers/ol-esh.js",
-    "start": "gulp serve --development",
+    "start": "gulp serve",
     "build": "gulp default",
     "test": "gulp test",
     "dev": "gulp serve --development --noMinify"
@@ -53,6 +53,7 @@
     "karma-jasmine": "^1.0.2",
     "karma-junit7-sonarqube-reporter": "0.0.5",
     "karma-phantomjs-launcher": "^1.0.1",
-    "karma-spec-reporter": "0.0.26"
+    "karma-spec-reporter": "0.0.26",
+    "merge-stream": "^1.0.1"
   }
 }

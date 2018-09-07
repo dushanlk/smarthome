@@ -4,8 +4,8 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <artifactId>storage</artifactId>
     <groupId>org.eclipse.smarthome.bundles</groupId>
+    <artifactId>storage</artifactId>
     <version>0.10.0-SNAPSHOT</version>
   </parent>
   <groupId>org.eclipse.smarthome.storage</groupId>
@@ -14,11 +14,6 @@
   <packaging>eclipse-test-plugin</packaging>
 
   <name>Eclipse SmartHome Storage JSON Tests</name>
-
-  <properties>
-    <bundle.symbolicName>org.eclipse.smarthome.storage.json.test</bundle.symbolicName>
-    <bundle.namespace>org.eclipse.smarthome.storage.json.test</bundle.namespace>
-  </properties>
 
   <build>
     <plugins>

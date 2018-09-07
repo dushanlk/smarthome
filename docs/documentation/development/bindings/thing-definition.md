@@ -105,11 +105,27 @@ The following XML snippet shows a system channel-type definition and thing-type 
 
 There exist systemwide channels that are available by default:
 
-| Channel Type ID | Reference typeId       | Item Type    | Category         | Description  |
-|-----------------|------------------------|--------------|----------------- |------------- |
-| signal-strength | system.signal-strength | Number       | QualityOfService | Represents signal strength of a device as a Number with values 0, 1, 2, 3 or 4; 0 being worst strength and 4 being best strength.  |
-| low-battery     | system.low-battery     | Switch       | Battery          | Represents a low battery warning with possible values on/off. |
-| battery-level   | system.battery-level   | Number       | Battery          | Represents the battery level as a percentage (0-100%). Bindings for things supporting battery level in a different format (e.g. 4 levels) should convert to a percentage to provide a consistent battery level reading. |
+| Channel Type ID      | Reference typeId            | Item Type            | Category         | Description                                                                                                                                                                                                             |
+|----------------------|-----------------------------|----------------------|------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| signal-strength      | system.signal-strength      | Number               | QualityOfService | Represents signal strength of a device as a Number with values 0, 1, 2, 3 or 4; 0 being worst strength and 4 being best strength.                                                                                       |
+| low-battery          | system.low-battery          | Switch               | Battery          | Represents a low battery warning with possible values on/off.                                                                                                                                                           |
+| battery-level        | system.battery-level        | Number               | Battery          | Represents the battery level as a percentage (0-100%). Bindings for things supporting battery level in a different format (e.g. 4 levels) should convert to a percentage to provide a consistent battery level reading. |
+| power                | system.power                | Switch               | -                | Turn a device on/off.                                                                                                                                                                                                   |
+| brightness           | system.brightness           | Dimmer               | Light            | Brightness of a bulb (0-100%).                                                                                                                                                                                          |
+| color                | system.color                | Color                | ColorLight       | Color of a bulb.                                                                                                                                                                                                        |
+| color-temperature    | system.color-temperature    | Dimmer               | ColorLight       | Color temperature of a bulb (0-100%). 0% should be the coldest setting (highest Kelvin value).                                                                                                                          |
+| location             | system.location             | Location             | -                | Location in lat.,lon.,height coordinates.                                                                                                                                                                               |
+| motion               | system.motion               | Switch               | Motion           | Motion detected by the device (ON if motion is detected).                                                                                                                                                               |
+| mute                 | system.mute                 | Switch               | SoundVolume      | Turn on/off the volume of a device.                                                                                                                                                                                     |
+| volume               | system.volume               | Dimmer               | SoundVolume      | Change the sound volume of a device (0-100%).                                                                                                                                                                           |
+| media-control        | system.media-control        | Player               | MediaControl     | Control for a media player.                                                                                                                                                                                             |
+| media-title          | system.media-title          | String               | -                | Title of a (played) media file.                                                                                                                                                                                         |
+| media-artist         | system.media-artist         | String               | -                | Artist of a (played) media file.                                                                                                                                                                                        |
+| outdoor-temperature  | system.outdoor-temperature  | Number:Temperature   | Temperature      | Current outdoor temperature.                                                                                                                                                                                            |
+| wind-direction       | system.wind-direction       | Number:Angle         | Wind             | Wind direction in degrees (0-360°).                                                                                                                                                                                     |
+| wind-speed           | system.wind-speed           | Number:Speed         | Wind             | Wind speed                                                                                                                                                                                                              |
+| atmospheric-humidity | system.atmospheric-humidity | Number:Dimensionless | Humidity         | Atmospheric humidity in percent.                                                                                                                                                                                        |
+| barometric-pressure  | system.barometric-pressure  | Number:Pressure      | Pressure         | Barometric pressure                                                                                                                                                                                                     |
 
 For further information about categories see the [categories page](../../concepts/categories.html).
 
@@ -349,3 +365,35 @@ The description can include limited HTML to enhance the display of this informat
 
 The following HTML tags are allowed : ```<b>, <br />, <em>, <h1>, <h2>, <h3>, <h4>, <h5>, <h6>, <i>, <p>, <small>, <strong>, <sub>, <sup>, <ul>, <ol>, <li>```. 
 These must be inside the XML escape sequence - e.g. ```<description><![CDATA[ HTML marked up text here ]]></description>```.
+
+## Auto Update Policies
+
+Channel types can optionally define a policy with respect to the auto update handling. 
+This influences the decision within the framework if an auto-update of the item's state should be sent in case a command is received for it.
+The auto update policy typically is inherited by the channel from its channel type. 
+Nevertheless, this value can be overridden in the channel definition.
+
+In this example, an auto update policy is defined for the channel type, but is overridden in the channel definition:
+
+```xml
+<channel-type id="channel">
+    <label>Channel with an auto update policy</label>
+    <autoUpdatePolicy>recommend</autoUpdatePolicy>
+</channel-type>
+
+<thing-type id="thingtype">
+    <label>Sample Thing</label>
+    <description>Thing type which overrides the auto update policy of a channel</description>
+    <channels>
+      <channel id="instance" typeId="channel">
+        <autoUpdatePolicy>default</autoUpdatePolicy>
+      </channel>
+    </channels>
+</thing-type>
+```
+
+The following policies are supported:
+
+* **veto**: No automatic state update should be sent by the framework. The thing handler will make sure it sends a state update and it can do it better than just converting the command to a state.
+* **default**: The binding does not care and the framework may do what it deems to be right. The state update which the framework will send out normally will correspond the command state anyway. This is the default if no other policy is set explicitly.
+* **recommend**: An automatic state update should be sent by the framework because no updates are sent by the binding. This usually is the case when devices don't expose their current state to the handler.

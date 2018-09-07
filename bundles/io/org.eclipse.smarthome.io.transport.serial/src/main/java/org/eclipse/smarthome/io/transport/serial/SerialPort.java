@@ -28,6 +28,7 @@ import org.eclipse.jdt.annotation.Nullable;
  * This interface is similar to the serial port of the 'Java Communications API'.
  *
  * @author Markus Rathgeb - Initial contribution
+ * @author Kai Kreuzer - added further methods
  */
 @NonNullByDefault
 public interface SerialPort extends Closeable {
@@ -113,6 +114,13 @@ public interface SerialPort extends Closeable {
     OutputStream getOutputStream() throws IOException;
 
     /**
+     * Retrieves the name of the serial port.
+     *
+     * @return the name of the serial port
+     */
+    String getName();
+
+    /**
      * Registers a {@link SerialPortEventListener} object to listen for {@link SerialEvents}.
      *
      * <p>
@@ -146,6 +154,34 @@ public interface SerialPort extends Closeable {
     void notifyOnDataAvailable(boolean enable);
 
     /**
+     * Enable / disable the notification on break interrupt.
+     *
+     * @param enable true if the notification should be enabled
+     */
+    void notifyOnBreakInterrupt(boolean enable);
+
+    /**
+     * Enable / disable the notification on framing error.
+     *
+     * @param enable true if the notification should be enabled
+     */
+    void notifyOnFramingError(boolean enable);
+
+    /**
+     * Enable / disable the notification on overrun error.
+     *
+     * @param enable true if the notification should be enabled
+     */
+    void notifyOnOverrunError(boolean enable);
+
+    /**
+     * Enable / disable the notification on parity error.
+     *
+     * @param enable true if the notification should be enabled
+     */
+    void notifyOnParityError(boolean enable);
+
+    /**
      * Enables the receive timeout.
      *
      * <p>
@@ -157,4 +193,32 @@ public interface SerialPort extends Closeable {
      * @throws IllegalArgumentException on a negative timeout value
      */
     void enableReceiveTimeout(int timeout) throws UnsupportedCommOperationException, IllegalArgumentException;
+
+    /**
+     * Disable receive timeout.
+     */
+    void disableReceiveTimeout();
+
+    /**
+     * Sets the flow control mode value.
+     *
+     * @param flowcontrol The flowcontrol (<code>int</code>) parameter.
+     * @throws UnsupportedCommOperationException Unsupported Comm Operation Exception.
+     */
+    void setFlowControlMode(int flowcontrolRtsctsOut) throws UnsupportedCommOperationException;
+
+    /**
+     * Enable receive threshold with the specified thresh parameter.
+     *
+     * @param thresh The thresh (<code>int</code>) parameter.
+     * @throws UnsupportedCommOperationException Unsupported Comm Operation Exception.
+     */
+    void enableReceiveThreshold(int i) throws UnsupportedCommOperationException;
+
+    /**
+     * Sets or clears the RTS (Request To Send) bit in the UART, if supported by the underlying implementation.
+     *
+     * @param rts true rts is set, false if rts cleared
+     */
+    void setRTS(boolean rts);
 }

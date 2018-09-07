@@ -21,7 +21,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.WeakHashMap;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
@@ -65,7 +64,7 @@ public abstract class GenericItem implements ActiveItem {
 
     protected List<String> groupNames = new ArrayList<String>();
 
-    protected transient volatile Set<String> tags = ConcurrentHashMap.newKeySet();
+    protected Set<String> tags = new HashSet<String>();
 
     protected final String name;
 
@@ -341,7 +340,7 @@ public abstract class GenericItem implements ActiveItem {
 
     @Override
     public boolean hasTag(String tag) {
-        return (tags.contains(tag));
+        return tags.stream().anyMatch(t -> t.equalsIgnoreCase(tag));
     }
 
     @Override
@@ -361,7 +360,7 @@ public abstract class GenericItem implements ActiveItem {
 
     @Override
     public void removeTag(String tag) {
-        tags.remove(tag);
+        tags.remove(tags.stream().filter(t -> t.equalsIgnoreCase(tag)).findFirst().orElse(tag));
     }
 
     @Override
