@@ -13,7 +13,7 @@
 				<p>If the simple mode is turned off, the user has the full control about which items channels are linked to. Existing links will remain untouched.</p>
 			]]>
 			</description>
-			<default>true</default>
+			<default>false</default>
 		</parameter>
 	</config-description>
 
