@@ -107,7 +107,7 @@ angular.module('PaperUI.things') //
     $scope.category = params.category;
     $scope.itemFormVisible = false;
     $scope.itemsList = [];
-    $scope.channelKind = params.channelKind;
+    $scope.channel = params.channel;
     $scope.linkModel = params.link;
 
     var createAcceptedItemTypes = function(paramItemTypes) {
@@ -120,14 +120,16 @@ angular.module('PaperUI.things') //
 
         angular.forEach(paramItemTypes, function(itemType) {
             addToAcceptedItemTypes(itemType);
-            if (itemType == "Color") {
-                addToAcceptedItemTypes("Switch");
-                addToAcceptedItemTypes("Dimmer");
-            } else if (itemType == "Dimmer") {
-                addToAcceptedItemTypes("Switch");
+            if (itemType == 'Color') {
+                addToAcceptedItemTypes('Switch');
+                addToAcceptedItemTypes('Dimmer');
+            } else if (itemType == 'Dimmer') {
+                addToAcceptedItemTypes('Switch');
+            } else if (itemType.indexOf('Number:') === 0) {
+                addToAcceptedItemTypes('Number');
             }
 
-        })
+        });
 
         return acceptedItemTypes;
     }
@@ -183,38 +185,39 @@ angular.module('PaperUI.things') //
     }
 
     function activate() {
-        var profileTypeUid = $scope.linkModel.configuration['profile'];
-        if (profileTypeUid === undefined || profileTypeUid === "system:default") {
-            $scope.acceptedItemTypes = createAcceptedItemTypes(params.acceptedItemTypes);
-        } else {
-            profile = profileTypeRepository.find(function(element) {
-                return element.uid == profileTypeUid;
-            });
-            $scope.acceptedItemTypes = profile.supportedItemTypes;
-        }
-
-        itemRepository.getAll(function(items) {
-            $scope.items = items;
-            if ($scope.acceptedItemTypes.length > 0) {
-                $scope.itemsList = $.grep($scope.items, function(item) {
-                    return $scope.acceptedItemTypes.indexOf(item.type) != -1;
-                });
+        profileTypeRepository.getAll().then(function() {
+            var profileTypeUid = $scope.linkModel.configuration['profile'];
+            if (profileTypeUid === undefined || profileTypeUid === "system:default") {
+                $scope.acceptedItemTypes = createAcceptedItemTypes(params.acceptedItemTypes);
             } else {
-                $scope.itemsList = $scope.items;
-            }
-            $scope.itemsList = $.grep($scope.itemsList, function(item) {
-                return $scope.linkedItems.indexOf(item.name) == -1;
-            });
-            if (params.allowNewItemCreation) {
-                $scope.itemsList.push({
-                    name : "_createNew",
-                    type : $scope.acceptedItemType
+                profile = profileTypeRepository.find(function(element) {
+                    return element.uid == profileTypeUid;
                 });
+                $scope.acceptedItemTypes = profile.supportedItemTypes;
             }
-            $scope.itemsList = $filter('orderBy')($scope.itemsList, "name");
+
+            itemRepository.getAll(function(items) {
+                $scope.items = items;
+                if ($scope.acceptedItemTypes.length > 0) {
+                    $scope.itemsList = $.grep($scope.items, function(item) {
+                        return $scope.acceptedItemTypes.indexOf(item.type) != -1;
+                    });
+                } else {
+                    $scope.itemsList = $scope.items;
+                }
+                $scope.itemsList = $.grep($scope.itemsList, function(item) {
+                    return $scope.linkedItems.indexOf(item.name) == -1;
+                });
+                if (params.allowNewItemCreation) {
+                    $scope.itemsList.push({
+                        name : "_createNew",
+                        type : $scope.acceptedItemType
+                    });
+                }
+                $scope.itemsList = $filter('orderBy')($scope.itemsList, "name");
+            });
         });
     }
-
 }).controller('UnlinkChannelDialogController', function($scope, $mdDialog, toastService, linkService, itemName) {
     $scope.itemName = itemName;
     $scope.close = function() {

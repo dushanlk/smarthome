@@ -2,7 +2,7 @@ Manifest-Version: 1.0
 Bundle-ActivationPolicy: lazy
 Bundle-ClassPath: .
 Bundle-ManifestVersion: 2
-Bundle-Name: Magic Bundle
+Bundle-Name: Eclipse SmartHome Magic Bundle
 Bundle-RequiredExecutionEnvironment: JavaSE-1.8
 Bundle-SymbolicName: org.eclipse.smarthome.magic;singleton:=true
 Bundle-Vendor: Eclipse.org/SmartHome
@@ -30,6 +30,7 @@ Import-Package:
  org.eclipse.smarthome.core.thing.firmware,
  org.eclipse.smarthome.core.thing.type,
  org.eclipse.smarthome.core.types,
+ org.eclipse.smarthome.io.net.http,
  org.eclipse.smarthome.magic.binding,
  org.eclipse.smarthome.magic.binding.handler,
  org.eclipse.smarthome.magic.service,

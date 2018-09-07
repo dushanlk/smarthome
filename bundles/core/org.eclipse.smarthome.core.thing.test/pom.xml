@@ -12,18 +12,12 @@
   <packaging>eclipse-test-plugin</packaging>
   <name>Eclipse SmartHome Thing Tests</name>
 
-  <properties>
-    <bundle.symbolicName>org.eclipse.smarthome.core.thing.test</bundle.symbolicName>
-    <bundle.namespace>org.eclipse.smarthome.core.thing.test</bundle.namespace>
-  </properties>
-
   <build>
     <plugins>
       <plugin>
         <groupId>${tycho-groupid}</groupId>
         <artifactId>target-platform-configuration</artifactId>
         <configuration>
-          <environments combine.self="override"></environments>
           <dependency-resolution>
             <extraRequirements>
               <requirement>
@@ -107,11 +101,6 @@
             </bundle>
             <bundle>
               <id>org.eclipse.smarthome.core.thing.xml</id>
-              <level>4</level>
-              <autoStart>true</autoStart>
-            </bundle>
-            <bundle>
-              <id>org.eclipse.smarthome.core.autoupdate</id>
               <level>4</level>
               <autoStart>true</autoStart>
             </bundle>
