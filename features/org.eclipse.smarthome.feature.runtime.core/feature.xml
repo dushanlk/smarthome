@@ -130,6 +130,13 @@
          unpack="false"/>
 
    <plugin
+         id="org.eclipse.smarthome.core.semantics"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"
+         unpack="false"/>
+
+   <plugin
          id="org.eclipse.smarthome.core.scheduler"
          download-size="0"
          install-size="0"
@@ -152,6 +159,27 @@
 
    <plugin
          id="org.eclipse.smarthome.config.discovery.mdns"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"
+         unpack="false"/>
+
+   <plugin
+         id="org.eclipse.smarthome.io.http"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"
+         unpack="false"/>
+
+   <plugin
+         id="org.eclipse.smarthome.io.http.auth"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"
+         unpack="false"/>
+
+   <plugin
+         id="org.eclipse.smarthome.io.http.auth.basic"
          download-size="0"
          install-size="0"
          version="0.0.0"
