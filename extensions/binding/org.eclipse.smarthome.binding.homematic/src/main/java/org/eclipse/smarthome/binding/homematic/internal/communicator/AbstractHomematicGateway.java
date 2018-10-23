@@ -519,6 +519,11 @@ public abstract class AbstractHomematicGateway implements RpcEventListener, Home
     }
 
     @Override
+    public void loadDatapointValue(HmDatapoint dp) throws IOException {
+        getRpcClient(dp.getChannel().getDevice().getHmInterface()).getDatapointValue(dp);
+    }
+
+    @Override
     public void loadRssiValues() throws IOException {
         for (HmInterface hmInterface : availableInterfaces.keySet()) {
             if (hmInterface == HmInterface.RF || hmInterface == HmInterface.CUXD) {
@@ -626,13 +631,13 @@ public abstract class AbstractHomematicGateway implements RpcEventListener, Home
     @Override
     public void sendDatapointIgnoreVirtual(HmDatapoint dp, HmDatapointConfig dpConfig, Object newValue)
             throws IOException, HomematicClientException {
-        sendDatapoint(dp, dpConfig, newValue, true);
+        sendDatapoint(dp, dpConfig, newValue, null, true);
     }
 
     @Override
-    public void sendDatapoint(HmDatapoint dp, HmDatapointConfig dpConfig, Object newValue)
+    public void sendDatapoint(HmDatapoint dp, HmDatapointConfig dpConfig, Object newValue, String rxMode)
             throws IOException, HomematicClientException {
-        sendDatapoint(dp, dpConfig, newValue, false);
+        sendDatapoint(dp, dpConfig, newValue, rxMode, false);
     }
 
     /**
@@ -640,7 +645,7 @@ public abstract class AbstractHomematicGateway implements RpcEventListener, Home
      * executions and auto disabling.
      */
     private void sendDatapoint(final HmDatapoint dp, final HmDatapointConfig dpConfig, final Object newValue,
-            final boolean ignoreVirtualDatapoints) throws IOException, HomematicClientException {
+            final String rxMode, final boolean ignoreVirtualDatapoints) throws IOException, HomematicClientException {
         final HmDatapointInfo dpInfo = new HmDatapointInfo(dp);
         if (dp.isPressDatapoint() || (config.getGatewayInfo().isHomegear() && dp.isVariable())) {
             echoEvents.add(dpInfo);
@@ -672,9 +677,10 @@ public abstract class AbstractHomematicGateway implements RpcEventListener, Home
                                 newValue, id);
                         setVariable(dp, newValue);
                     } else {
-                        logger.debug("Sending datapoint '{}' with value '{}' to gateway with id '{}'", dpInfo, newValue,
-                                id);
-                        getRpcClient(dp.getChannel().getDevice().getHmInterface()).setDatapointValue(dp, newValue);
+                        logger.debug("Sending datapoint '{}' with value '{}' to gateway with id '{}' using rxMode '{}'",
+                                dpInfo, newValue, id, rxMode == null ? "DEFAULT" : rxMode);
+                        getRpcClient(dp.getChannel().getDevice().getHmInterface()).setDatapointValue(dp, newValue,
+                                rxMode);
                     }
                     dp.setValue(newValue);
 

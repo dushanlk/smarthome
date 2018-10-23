@@ -12,6 +12,7 @@
  */
 package org.eclipse.smarthome.binding.mqtt.handler;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeoutException;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
@@ -38,11 +39,22 @@ import org.eclipse.smarthome.io.transport.mqtt.MqttService;
 public abstract class AbstractBrokerHandler extends BaseBridgeHandler implements MqttConnectionObserver {
     public static int TIMEOUT_DEFAULT = 1200; /* timeout in milliseconds */
     protected final String brokerID;
-    protected @Nullable MqttBrokerConnection connection;
+
+    @NonNullByDefault({})
+    protected MqttBrokerConnection connection;
+    protected final CompletableFuture<MqttBrokerConnection> connectionFuture = new CompletableFuture<>();
 
     public AbstractBrokerHandler(Bridge thing) {
         super(thing);
         this.brokerID = thing.getUID().getId();
+    }
+
+    /**
+     * Returns the underlying {@link MqttBrokerConnection} either immediately or after {@link #initialize()} has
+     * performed.
+     */
+    public CompletableFuture<MqttBrokerConnection> getConnectionAsync() {
+        return connectionFuture;
     }
 
     /**
@@ -61,26 +73,23 @@ public abstract class AbstractBrokerHandler extends BaseBridgeHandler implements
     }
 
     /**
-     * Registers a connection status listener and attempts a connection. This should be called only once per connection
-     * object. A connection usually tries to reconnect to the server via the configured reconnect strategy.
-     *
+     * Registers a connection status listener and attempts a connection if there is none so far.
      */
     @Override
     public void initialize() {
-        MqttBrokerConnection c = connection;
-        if (c == null) {
-            return;
-        }
-        c.addConnectionObserver(this);
+        connection.addConnectionObserver(this);
 
-        c.start().exceptionally(e -> {
+        connection.start().exceptionally(e -> {
             connectionStateChanged(MqttConnectionState.DISCONNECTED, e);
             return false;
         }).thenAccept(v -> {
             if (!v) {
                 connectionStateChanged(MqttConnectionState.DISCONNECTED, new TimeoutException("Timeout"));
+            } else {
+                connectionStateChanged(MqttConnectionState.CONNECTED, null);
             }
         });
+        connectionFuture.complete(connection);
     }
 
     @Override
@@ -101,10 +110,8 @@ public abstract class AbstractBrokerHandler extends BaseBridgeHandler implements
      */
     @Override
     public void dispose() {
-        if (connection != null) {
-            connection.removeConnectionObserver(this);
-            connection = null;
-        }
+        connection.removeConnectionObserver(this);
+        this.connection = null;
         super.dispose();
     }
 }

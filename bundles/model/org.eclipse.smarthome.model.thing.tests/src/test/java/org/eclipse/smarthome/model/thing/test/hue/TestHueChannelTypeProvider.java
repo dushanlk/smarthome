@@ -18,13 +18,15 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 
-import org.eclipse.smarthome.core.thing.type.ChannelDefinition;
+import org.eclipse.smarthome.core.thing.type.ChannelDefinitionBuilder;
 import org.eclipse.smarthome.core.thing.type.ChannelGroupType;
 import org.eclipse.smarthome.core.thing.type.ChannelGroupTypeBuilder;
+import org.eclipse.smarthome.core.thing.type.ChannelGroupTypeProvider;
 import org.eclipse.smarthome.core.thing.type.ChannelGroupTypeUID;
 import org.eclipse.smarthome.core.thing.type.ChannelType;
 import org.eclipse.smarthome.core.thing.type.ChannelTypeProvider;
 import org.eclipse.smarthome.core.thing.type.ChannelTypeUID;
+import org.osgi.service.component.annotations.Component;
 
 /**
  *
@@ -33,7 +35,8 @@ import org.eclipse.smarthome.core.thing.type.ChannelTypeUID;
  * @author Dennis Nobel - Initial contribution
  *
  */
-public class TestHueChannelTypeProvider implements ChannelTypeProvider {
+@Component
+public class TestHueChannelTypeProvider implements ChannelTypeProvider, ChannelGroupTypeProvider {
 
     public static final ChannelTypeUID COLORX_TEMP_CHANNEL_TYPE_UID = new ChannelTypeUID("Xhue:Xcolor_temperature");
     public static final ChannelTypeUID COLORX_CHANNEL_TYPE_UID = new ChannelTypeUID("Xhue:color");
@@ -62,8 +65,10 @@ public class TestHueChannelTypeProvider implements ChannelTypeProvider {
             ChannelGroupType groupX = ChannelGroupTypeBuilder.instance(GROUP_CHANNEL_GROUP_TYPE_UID, "Channel Group")
                     .withDescription("Channel Group")
                     .withChannelDefinitions(Arrays.asList(
-                            new ChannelDefinition("foo", TestHueChannelTypeProvider.COLOR_CHANNEL_TYPE_UID),
-                            new ChannelDefinition("bar", TestHueChannelTypeProvider.COLOR_CHANNEL_TYPE_UID)))
+                            new ChannelDefinitionBuilder("foo", TestHueChannelTypeProvider.COLOR_CHANNEL_TYPE_UID)
+                                    .build(),
+                            new ChannelDefinitionBuilder("bar", TestHueChannelTypeProvider.COLOR_CHANNEL_TYPE_UID)
+                                    .build()))
                     .build();
             channelGroupTypes = Arrays.asList(groupX);
 

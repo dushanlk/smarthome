@@ -82,7 +82,7 @@ public class MultisensorThingHandler extends OwBaseThingHandler {
         if (configuration.get(CONFIG_DIGITALREFRESH) != null) {
             digitalRefreshInterval = ((BigDecimal) configuration.get(CONFIG_DIGITALREFRESH)).intValue() * 1000;
         } else {
-            refreshInterval = 10 * 1000;
+            digitalRefreshInterval = 10 * 1000;
         }
         digitalLastRefresh = 0;
 
@@ -122,11 +122,11 @@ public class MultisensorThingHandler extends OwBaseThingHandler {
                 Boolean forcedRefresh = digitalLastRefresh == 0;
                 digitalLastRefresh = now;
 
-                if (!sensors.get(2).checkPresence(bridgeHandler)) {
+                if (!sensors.get(3).checkPresence(bridgeHandler)) {
                     return;
                 }
 
-                sensors.get(2).refresh(bridgeHandler, forcedRefresh);
+                sensors.get(3).refresh(bridgeHandler, forcedRefresh);
             }
 
             if (now >= (lastRefresh + refreshInterval)) {
@@ -188,33 +188,38 @@ public class MultisensorThingHandler extends OwBaseThingHandler {
         }
 
         // light/current sensor
-        if (((thingType == THING_TYPE_AMS) || (thingType == THING_TYPE_BMS))
-                && (configuration.get(CONFIG_LIGHTSENSOR) != null)
-                && ((Boolean) configuration.get(CONFIG_LIGHTSENSOR))) {
-            sensors.get(0).enableChannel(CHANNEL_LIGHT);
-            if (thing.getChannel(CHANNEL_CURRENT) != null) {
-                thingBuilder.withoutChannel(new ChannelUID(getThing().getUID(), CHANNEL_CURRENT));
-            }
-            if (thing.getChannel(CHANNEL_LIGHT) == null) {
-                thingBuilder.withChannel(
-                        ChannelBuilder.create(new ChannelUID(getThing().getUID(), CHANNEL_LIGHT), "Number:Illuminance")
-                                .withLabel("Light").withType(new ChannelTypeUID(BINDING_ID, "light")).build());
-            }
-            if (hwRevision <= 13) {
-                ((DS2438) sensors.get(0)).setLightSensorType(LightSensorType.ElabNetV1);
+        if ((thingType == THING_TYPE_AMS) || (thingType == THING_TYPE_BMS)) {
+            if ((configuration.get(CONFIG_LIGHTSENSOR) != null) && ((Boolean) configuration.get(CONFIG_LIGHTSENSOR))) {
+                sensors.get(0).enableChannel(CHANNEL_LIGHT);
+                if (thing.getChannel(CHANNEL_CURRENT) != null) {
+                    thingBuilder.withoutChannel(new ChannelUID(getThing().getUID(), CHANNEL_CURRENT));
+                }
+                if (thing.getChannel(CHANNEL_LIGHT) == null) {
+                    thingBuilder.withChannel(ChannelBuilder
+                            .create(new ChannelUID(getThing().getUID(), CHANNEL_LIGHT), "Number:Illuminance")
+                            .withLabel("Light").withType(new ChannelTypeUID(BINDING_ID, "light")).build());
+                }
+                if (hwRevision <= 13) {
+                    ((DS2438) sensors.get(0)).setLightSensorType(LightSensorType.ElabNetV1);
+                } else {
+                    ((DS2438) sensors.get(0)).setLightSensorType(LightSensorType.ElabNetV2);
+                }
             } else {
-                ((DS2438) sensors.get(0)).setLightSensorType(LightSensorType.ElabNetV2);
+                sensors.get(0).enableChannel(CHANNEL_CURRENT);
+                if (thing.getChannel(CHANNEL_LIGHT) != null) {
+                    thingBuilder.withoutChannel(new ChannelUID(getThing().getUID(), CHANNEL_LIGHT));
+                }
+                if (thing.getChannel(CHANNEL_CURRENT) == null) {
+                    thingBuilder.withChannel(ChannelBuilder
+                            .create(new ChannelUID(getThing().getUID(), CHANNEL_CURRENT), "Number:Current")
+                            .withLabel("Current").withType(new ChannelTypeUID(BINDING_ID, "current")).build());
+                }
             }
-        } else {
-            sensors.get(0).enableChannel(CHANNEL_CURRENT);
-            if (thing.getChannel(CHANNEL_LIGHT) != null) {
-                thingBuilder.withoutChannel(new ChannelUID(getThing().getUID(), CHANNEL_LIGHT));
-            }
-            if (thing.getChannel(CHANNEL_CURRENT) == null) {
-                thingBuilder.withChannel(
-                        ChannelBuilder.create(new ChannelUID(getThing().getUID(), CHANNEL_CURRENT), "Number:Current")
-                                .withLabel("Current").withType(new ChannelTypeUID(BINDING_ID, "current")).build());
-            }
+        }
+
+        // second AI channel
+        if (THING_TYPE_AMS.equals(thingType)) {
+            sensors.get(2).enableChannel(CHANNEL_VOLTAGE);
         }
 
         // digital channels
