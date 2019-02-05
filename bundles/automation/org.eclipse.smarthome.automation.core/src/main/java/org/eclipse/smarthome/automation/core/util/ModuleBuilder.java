@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -79,7 +79,7 @@ public abstract class ModuleBuilder<B extends ModuleBuilder<B, T>, T extends Mod
     protected ModuleBuilder(T module) {
         this.id = module.getId();
         this.typeUID = module.getTypeUID();
-        this.configuration = module.getConfiguration();
+        this.configuration = new Configuration(module.getConfiguration());
         this.label = module.getLabel();
         this.description = module.getDescription();
     }
@@ -95,7 +95,7 @@ public abstract class ModuleBuilder<B extends ModuleBuilder<B, T>, T extends Mod
     }
 
     public B withConfiguration(Configuration configuration) {
-        this.configuration = configuration;
+        this.configuration = new Configuration(configuration);
         return myself();
     }
 

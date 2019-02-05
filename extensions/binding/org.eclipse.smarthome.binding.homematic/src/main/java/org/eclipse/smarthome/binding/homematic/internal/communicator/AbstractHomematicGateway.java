@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -43,6 +43,7 @@ import org.eclipse.smarthome.binding.homematic.internal.communicator.server.RpcE
 import org.eclipse.smarthome.binding.homematic.internal.communicator.server.RpcServer;
 import org.eclipse.smarthome.binding.homematic.internal.communicator.server.XmlRpcServer;
 import org.eclipse.smarthome.binding.homematic.internal.communicator.virtual.BatteryTypeVirtualDatapointHandler;
+import org.eclipse.smarthome.binding.homematic.internal.communicator.virtual.ButtonVirtualDatapointHandler;
 import org.eclipse.smarthome.binding.homematic.internal.communicator.virtual.DeleteDeviceModeVirtualDatapointHandler;
 import org.eclipse.smarthome.binding.homematic.internal.communicator.virtual.DeleteDeviceVirtualDatapointHandler;
 import org.eclipse.smarthome.binding.homematic.internal.communicator.virtual.DisplayOptionsVirtualDatapointHandler;
@@ -52,7 +53,6 @@ import org.eclipse.smarthome.binding.homematic.internal.communicator.virtual.Hmw
 import org.eclipse.smarthome.binding.homematic.internal.communicator.virtual.InstallModeDurationVirtualDatapoint;
 import org.eclipse.smarthome.binding.homematic.internal.communicator.virtual.InstallModeVirtualDatapoint;
 import org.eclipse.smarthome.binding.homematic.internal.communicator.virtual.OnTimeAutomaticVirtualDatapointHandler;
-import org.eclipse.smarthome.binding.homematic.internal.communicator.virtual.PressVirtualDatapointHandler;
 import org.eclipse.smarthome.binding.homematic.internal.communicator.virtual.ReloadAllFromGatewayVirtualDatapointHandler;
 import org.eclipse.smarthome.binding.homematic.internal.communicator.virtual.ReloadFromGatewayVirtualDatapointHandler;
 import org.eclipse.smarthome.binding.homematic.internal.communicator.virtual.ReloadRssiVirtualDatapointHandler;
@@ -130,7 +130,7 @@ public abstract class AbstractHomematicGateway implements RpcEventListener, Home
         virtualDatapointHandlers.add(new SignalStrengthVirtualDatapointHandler());
         virtualDatapointHandlers.add(new DisplayTextVirtualDatapoint());
         virtualDatapointHandlers.add(new HmwIoModuleVirtualDatapointHandler());
-        virtualDatapointHandlers.add(new PressVirtualDatapointHandler());
+        virtualDatapointHandlers.add(new ButtonVirtualDatapointHandler());
     }
 
     public AbstractHomematicGateway(String id, HomematicConfig config, HomematicGatewayAdapter gatewayAdapter,
@@ -151,9 +151,11 @@ public abstract class AbstractHomematicGateway implements RpcEventListener, Home
             availableInterfaces.put(HmInterface.RF, TransferMode.BIN_RPC);
         } else if (gatewayInfo.isCCU()) {
             // CCU
-            availableInterfaces.put(HmInterface.RF, TransferMode.BIN_RPC);
+            if (gatewayInfo.isRfInterface()) {
+                availableInterfaces.put(HmInterface.RF, TransferMode.XML_RPC);
+            }
             if (gatewayInfo.isWiredInterface()) {
-                availableInterfaces.put(HmInterface.WIRED, TransferMode.BIN_RPC);
+                availableInterfaces.put(HmInterface.WIRED, TransferMode.XML_RPC);
             }
             if (gatewayInfo.isHmipInterface()) {
                 availableInterfaces.put(HmInterface.HMIP, TransferMode.XML_RPC);
@@ -166,7 +168,9 @@ public abstract class AbstractHomematicGateway implements RpcEventListener, Home
             }
         } else {
             // other
-            availableInterfaces.put(HmInterface.RF, TransferMode.XML_RPC);
+            if (gatewayInfo.isRfInterface()) {
+                availableInterfaces.put(HmInterface.RF, TransferMode.XML_RPC);
+            }
             if (gatewayInfo.isWiredInterface()) {
                 availableInterfaces.put(HmInterface.WIRED, TransferMode.XML_RPC);
             }
@@ -294,7 +298,7 @@ public abstract class AbstractHomematicGateway implements RpcEventListener, Home
      * Returns the default interface to communicate with the Homematic gateway.
      */
     protected HmInterface getDefaultInterface() {
-        return HmInterface.RF;
+        return availableInterfaces.containsKey(HmInterface.RF) ? HmInterface.RF : HmInterface.HMIP;
     }
 
     @Override

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -100,6 +100,7 @@ public class SetpointRenderer extends AbstractWidgetRenderer {
         snippet = StringUtils.replace(snippet, "%newlowerstate%", newLowerState);
         snippet = StringUtils.replace(snippet, "%newhigherstate%", newHigherState);
         snippet = StringUtils.replace(snippet, "%label%", getLabel(w));
+        snippet = StringUtils.replace(snippet, "%state%", getState(w));
         snippet = StringUtils.replace(snippet, "%format%", getFormat());
         snippet = StringUtils.replace(snippet, "%servletname%", WebAppServlet.SERVLET_NAME);
         snippet = StringUtils.replace(snippet, "%minValue%", minValue.toString());

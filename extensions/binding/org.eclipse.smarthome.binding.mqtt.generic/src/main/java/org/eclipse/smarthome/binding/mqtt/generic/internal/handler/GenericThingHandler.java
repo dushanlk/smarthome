@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,20 +12,27 @@
  */
 package org.eclipse.smarthome.binding.mqtt.generic.internal.handler;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import org.apache.commons.lang.StringUtils;
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
-import org.eclipse.smarthome.binding.mqtt.generic.internal.ChannelState;
-import org.eclipse.smarthome.binding.mqtt.generic.internal.ChannelStateUpdateListener;
-import org.eclipse.smarthome.binding.mqtt.generic.internal.ChannelStateWithTransformation;
-import org.eclipse.smarthome.binding.mqtt.generic.internal.MqttChannelTypeProvider;
-import org.eclipse.smarthome.binding.mqtt.generic.internal.TransformationServiceProvider;
-import org.eclipse.smarthome.binding.mqtt.generic.internal.values.AbstractMqttThingValue;
+import org.eclipse.smarthome.binding.mqtt.generic.internal.generic.ChannelConfig;
+import org.eclipse.smarthome.binding.mqtt.generic.internal.generic.ChannelState;
+import org.eclipse.smarthome.binding.mqtt.generic.internal.generic.ChannelStateTransformation;
+import org.eclipse.smarthome.binding.mqtt.generic.internal.generic.ChannelStateUpdateListener;
+import org.eclipse.smarthome.binding.mqtt.generic.internal.generic.MqttChannelStateDescriptionProvider;
+import org.eclipse.smarthome.binding.mqtt.generic.internal.generic.TransformationServiceProvider;
+import org.eclipse.smarthome.binding.mqtt.generic.internal.values.Value;
 import org.eclipse.smarthome.binding.mqtt.generic.internal.values.ValueFactory;
 import org.eclipse.smarthome.core.thing.Channel;
 import org.eclipse.smarthome.core.thing.ChannelUID;
@@ -33,6 +40,7 @@ import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.ThingStatus;
 import org.eclipse.smarthome.core.thing.ThingStatusDetail;
 import org.eclipse.smarthome.core.thing.type.ChannelTypeUID;
+import org.eclipse.smarthome.core.types.StateDescription;
 import org.eclipse.smarthome.io.transport.mqtt.MqttBrokerConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,14 +54,26 @@ import org.slf4j.LoggerFactory;
 public class GenericThingHandler extends AbstractMQTTThingHandler implements ChannelStateUpdateListener {
     private final Logger logger = LoggerFactory.getLogger(GenericThingHandler.class);
     final Map<ChannelUID, ChannelState> channelStateByChannelUID = new HashMap<>();
+    protected final MqttChannelStateDescriptionProvider stateDescProvider;
+    protected final TransformationServiceProvider transformationServiceProvider;
 
-    public GenericThingHandler(Thing thing, MqttChannelTypeProvider provider,
-            @Nullable TransformationServiceProvider transformationServiceProvider, int subscribeTimeout) {
-        super(thing, provider, transformationServiceProvider, subscribeTimeout);
+    /**
+     * Creates a new Thing handler for generic MQTT channels.
+     *
+     * @param thing The thing of this handler
+     * @param stateDescProvider A channel state provider
+     * @param transformationServiceProvider The transformation service provider
+     * @param subscribeTimeout The subscribe timeout
+     */
+    public GenericThingHandler(Thing thing, MqttChannelStateDescriptionProvider stateDescProvider,
+            TransformationServiceProvider transformationServiceProvider, int subscribeTimeout) {
+        super(thing, subscribeTimeout);
+        this.stateDescProvider = stateDescProvider;
+        this.transformationServiceProvider = transformationServiceProvider;
     }
 
     @Override
-    protected @Nullable ChannelState getChannelState(ChannelUID channelUID) {
+    public @Nullable ChannelState getChannelState(ChannelUID channelUID) {
         return channelStateByChannelUID.get(channelUID);
     }
 
@@ -64,27 +84,38 @@ public class GenericThingHandler extends AbstractMQTTThingHandler implements Cha
      * @param connection A started broker connection
      */
     @Override
-    protected CompletableFuture<Void> start(MqttBrokerConnection connection) {
-        List<CompletableFuture<Boolean>> futures = channelStateByChannelUID.values().stream()
-                .map(c -> c.start(connection, this)).collect(Collectors.toList());
+    protected CompletableFuture<@Nullable Void> start(MqttBrokerConnection connection) {
+        List<CompletableFuture<@Nullable Void>> futures = channelStateByChannelUID.values().stream()
+                .map(c -> c.start(connection, scheduler, 0)).collect(Collectors.toList());
         return CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()])).thenRun(() -> {
             updateStatus(ThingStatus.ONLINE, ThingStatusDetail.NONE);
         });
     }
 
     @Override
+    protected void stop() {
+        channelStateByChannelUID.values().forEach(c -> c.getCache().resetState());
+    }
+
+    @Override
     public void dispose() {
-        if (connection != null) {
-            channelStateByChannelUID.values().forEach(ChannelState::stop);
-            connection = null;
+        // Stop all MQTT subscriptions
+        try {
+            channelStateByChannelUID.values().stream().map(e -> e.stop())
+                    .reduce(CompletableFuture.completedFuture(null), (a, v) -> a.thenCompose(b -> v))
+                    .get(500, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException | ExecutionException | TimeoutException ignore) {
         }
+        // Remove all state descriptions of this handler
+        channelStateByChannelUID.forEach((uid, state) -> stateDescProvider.remove(uid));
+        connection = null;
         channelStateByChannelUID.clear();
         super.dispose();
     }
 
     /**
-     * For every Thing channel there exists a corresponding {@link ChannelState}. It consists of the MQTT state and
-     * MQTT command topic, the ChannelUID and a value state.
+     * For every Thing channel there exists a corresponding {@link ChannelState}. It consists of the MQTT state
+     * and MQTT command topic, the ChannelUID and a value state.
      *
      * @param channelConfig The channel configuration that contains MQTT state and command topic and multiple other
      *            configurations.
@@ -92,31 +123,55 @@ public class GenericThingHandler extends AbstractMQTTThingHandler implements Cha
      * @param valueState The channel value state
      * @return
      */
-    protected ChannelState createChannelState(GenericChannelConfig channelConfig, ChannelUID channelUID,
-            AbstractMqttThingValue valueState) {
-        TransformationServiceProvider transformationServiceProvider = this.transformationServiceProvider;
-        if (transformationServiceProvider != null) {
-            return new ChannelStateWithTransformation(channelConfig.stateTopic, channelConfig.commandTopic,
-                    channelConfig.transformationPattern, channelUID, valueState, transformationServiceProvider);
-        } else {
-            return new ChannelState(channelConfig.stateTopic, channelConfig.commandTopic, channelUID, valueState);
-        }
+    protected ChannelState createChannelState(ChannelConfig channelConfig, ChannelUID channelUID, Value valueState) {
+        ChannelState state = new ChannelState(channelConfig, channelUID, valueState, this);
+        String[] transformations;
+
+        // Incoming value transformations
+        transformations = channelConfig.transformationPattern.split("∩");
+        Stream.of(transformations).filter(t -> StringUtils.isNotBlank(t))
+                .map(t -> new ChannelStateTransformation(t, transformationServiceProvider))
+                .forEach(t -> state.addTransformation(t));
+
+        // Outgoing value transformations
+        transformations = channelConfig.transformationPatternOut.split("∩");
+        Stream.of(transformations).filter(t -> StringUtils.isNotBlank(t))
+                .map(t -> new ChannelStateTransformation(t, transformationServiceProvider))
+                .forEach(t -> state.addTransformationOut(t));
+
+        return state;
     }
 
     @Override
     public void initialize() {
+        List<ChannelUID> configErrors = new ArrayList<>();
         for (Channel channel : thing.getChannels()) {
             final ChannelTypeUID channelTypeUID = channel.getChannelTypeUID();
             if (channelTypeUID == null) {
                 logger.warn("Channel {} has no type", channel.getLabel());
                 continue;
             }
-            final GenericChannelConfig channelConfig = channel.getConfiguration().as(GenericChannelConfig.class);
-            ChannelState channelState = createChannelState(channelConfig, channel.getUID(),
-                    ValueFactory.createValueState(channelConfig, channelTypeUID.getId()));
-            channelStateByChannelUID.put(channel.getUID(), channelState);
+            final ChannelConfig channelConfig = channel.getConfiguration().as(ChannelConfig.class);
+            try {
+                Value value = ValueFactory.createValueState(channelConfig, channelTypeUID.getId());
+                ChannelState channelState = createChannelState(channelConfig, channel.getUID(), value);
+                channelStateByChannelUID.put(channel.getUID(), channelState);
+                StateDescription description = value.createStateDescription(channelConfig.unit,
+                        StringUtils.isBlank(channelConfig.commandTopic));
+                stateDescProvider.setDescription(channel.getUID(), description);
+            } catch (IllegalArgumentException e) {
+                logger.warn("Channel configuration error", e);
+                configErrors.add(channel.getUID());
+            }
         }
 
-        super.initialize();
+        // If some channels could not start up, put the entire thing offline and display the channels
+        // in question to the user.
+        if (configErrors.isEmpty()) {
+            super.initialize();
+        } else {
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, "Remove and recreate: "
+                    + configErrors.stream().map(e -> e.getAsString()).collect(Collectors.joining(",")));
+        }
     }
 }

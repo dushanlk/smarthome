@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -314,8 +314,9 @@ public class TradfriGatewayHandler extends BaseBridgeHandler implements CoapCall
 
     private synchronized void requestGatewayInfo() {
         // we are reusing our coap client and merely temporarily set a gateway info to call
-        deviceClient.setURI(this.gatewayInfoURI);
+        deviceClient.setURI(gatewayInfoURI);
         deviceClient.asyncGet().thenAccept(data -> {
+            logger.debug("requestGatewayInfo response: {}", data);
             JsonObject json = new JsonParser().parse(data).getAsJsonObject();
             String firmwareVersion = json.get(VERSION).getAsString();
             getThing().setProperty(Thing.PROPERTY_FIRMWARE_VERSION, firmwareVersion);

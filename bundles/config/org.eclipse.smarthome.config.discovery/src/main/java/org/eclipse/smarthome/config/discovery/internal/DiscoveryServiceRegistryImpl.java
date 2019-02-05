@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,10 +16,11 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -46,8 +47,6 @@ import org.osgi.service.component.annotations.ReferencePolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.HashMultimap;
-
 /**
  * The {@link DiscoveryServiceRegistryImpl} is a concrete implementation of the {@link DiscoveryServiceRegistry}.
  * <p>
@@ -69,7 +68,7 @@ import com.google.common.collect.HashMultimap;
 @NonNullByDefault
 public final class DiscoveryServiceRegistryImpl implements DiscoveryServiceRegistry, DiscoveryListener {
 
-    private final HashMultimap<DiscoveryService, DiscoveryResult> cachedResults = HashMultimap.create();
+    private final HashMap<DiscoveryService, Set<DiscoveryResult>> cachedResults = new HashMap<>();
 
     private final class AggregatingScanListener implements ScanListener {
 
@@ -186,10 +185,9 @@ public final class DiscoveryServiceRegistryImpl implements DiscoveryServiceRegis
     @Override
     public void addDiscoveryListener(DiscoveryListener listener) throws IllegalStateException {
         synchronized (cachedResults) {
-            Set<Entry<DiscoveryService, DiscoveryResult>> entries = cachedResults.entries();
-            for (Entry<DiscoveryService, DiscoveryResult> entry : entries) {
-                listener.thingDiscovered(entry.getKey(), entry.getValue());
-            }
+            cachedResults.forEach((service, results) -> {
+                results.forEach(result -> listener.thingDiscovered(service, result));
+            });
         }
         this.listeners.add(listener);
     }
@@ -257,8 +255,7 @@ public final class DiscoveryServiceRegistryImpl implements DiscoveryServiceRegis
     @Override
     public synchronized void thingDiscovered(final DiscoveryService source, final DiscoveryResult result) {
         synchronized (cachedResults) {
-            cachedResults.remove(source, result);
-            cachedResults.put(source, result);
+            cachedResults.computeIfAbsent(source, unused -> new HashSet<>()).add(result);
         }
         for (final DiscoveryListener listener : this.listeners) {
             try {
@@ -279,7 +276,7 @@ public final class DiscoveryServiceRegistryImpl implements DiscoveryServiceRegis
     @Override
     public synchronized void thingRemoved(final DiscoveryService source, final ThingUID thingUID) {
         synchronized (cachedResults) {
-            Iterator<DiscoveryResult> it = cachedResults.get(source).iterator();
+            Iterator<DiscoveryResult> it = cachedResults.getOrDefault(source, Collections.emptySet()).iterator();
             while (it.hasNext()) {
                 if (it.next().getThingUID().equals(thingUID)) {
                     it.remove();
@@ -449,7 +446,7 @@ public final class DiscoveryServiceRegistryImpl implements DiscoveryServiceRegis
         this.discoveryServices.remove(discoveryService);
         discoveryService.removeDiscoveryListener(this);
         synchronized (cachedResults) {
-            this.cachedResults.removeAll(discoveryService);
+            this.cachedResults.remove(discoveryService);
         }
     }
 

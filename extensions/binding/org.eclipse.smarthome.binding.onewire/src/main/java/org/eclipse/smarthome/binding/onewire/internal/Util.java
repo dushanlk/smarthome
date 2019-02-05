@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,15 +12,11 @@
  */
 package org.eclipse.smarthome.binding.onewire.internal;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import javax.measure.quantity.Dimensionless;
 import javax.measure.quantity.Temperature;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.smarthome.core.library.dimension.Density;
-import org.eclipse.smarthome.core.library.types.DecimalType;
 import org.eclipse.smarthome.core.library.types.QuantityType;
 import org.eclipse.smarthome.core.library.unit.SIUnits;
 import org.eclipse.smarthome.core.library.unit.SmartHomeUnits;
@@ -33,22 +29,6 @@ import org.eclipse.smarthome.core.types.State;
  */
 @NonNullByDefault
 public class Util {
-
-    /**
-     * convert a number to a list of booleans
-     *
-     * @param decimal
-     * @return
-     */
-    public static List<Boolean> decimalTypeToBooleanList(DecimalType decimal) {
-        List<Boolean> returnValues = new ArrayList<Boolean>();
-        int value = decimal.intValue();
-        for (int i = 0; i < 8; i++) {
-            returnValues.add((value & (1 << i)) > 0);
-        }
-        return returnValues;
-    }
-
     /**
      * calculate absolute humidity in g/m³ from measured values
      *
@@ -71,6 +51,13 @@ public class Util {
         }
     }
 
+    /**
+     * calculates the dewpoint in °C from measured values
+     *
+     * @param temperature the measured temperature
+     * @param relativeHumidity the measured relative humidity
+     * @return the corresponding dewpoint
+     */
     public static State calculateDewpoint(QuantityType<Temperature> temperature,
             QuantityType<Dimensionless> relativeHumidity) {
         Double theta = temperature.toUnit(SIUnits.CELSIUS).doubleValue();

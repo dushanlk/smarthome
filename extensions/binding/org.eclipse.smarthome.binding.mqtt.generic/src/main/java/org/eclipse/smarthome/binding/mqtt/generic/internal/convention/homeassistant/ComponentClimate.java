@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,7 +14,11 @@ package org.eclipse.smarthome.binding.mqtt.generic.internal.convention.homeassis
 
 import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.eclipse.jdt.annotation.Nullable;
+import org.eclipse.smarthome.binding.mqtt.generic.internal.generic.ChannelStateUpdateListener;
 import org.eclipse.smarthome.core.thing.ThingUID;
+
+import com.google.gson.Gson;
 
 /**
  * A MQTT climate component, following the https://www.home-assistant.io/components/climate.mqtt/ specification.
@@ -25,8 +29,9 @@ import org.eclipse.smarthome.core.thing.ThingUID;
  */
 @NonNullByDefault
 public class ComponentClimate extends AbstractComponent {
-    public ComponentClimate(ThingUID thing, String componentID, String configJSON) {
-        super(thing, componentID);
+    public ComponentClimate(ThingUID thing, HaID haID, String configJSON,
+            @Nullable ChannelStateUpdateListener channelStateUpdateListener, Gson gson) {
+        super(thing, haID, configJSON, gson);
         throw new UnsupportedOperationException("Component:Climate not supported yet");
     }
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -49,16 +49,6 @@ public class ExpiringCacheMapTest {
     @Before
     public void setUp() {
         subject = new ExpiringCacheMap<>(CACHE_EXPIRY);
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void testPutIllegalArgumentException1() throws IllegalArgumentException {
-        subject.put(FIRST_TEST_KEY, (Supplier<String>) null);
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void testPutIllegalArgumentException2() throws IllegalArgumentException {
-        subject.put(FIRST_TEST_KEY, (ExpiringCache<String>) null);
     }
 
     @Test(expected = IllegalArgumentException.class)

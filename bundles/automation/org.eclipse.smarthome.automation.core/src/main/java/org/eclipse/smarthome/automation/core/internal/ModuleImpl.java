@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -80,7 +80,7 @@ public abstract class ModuleImpl implements Module {
             @Nullable String description) {
         this.id = id;
         this.type = typeUID;
-        this.configuration = configuration == null ? new Configuration() : configuration;
+        this.configuration = new Configuration(configuration);
         this.label = label;
         this.description = description;
     }
@@ -152,6 +152,6 @@ public abstract class ModuleImpl implements Module {
      * @param configuration new configuration values.
      */
     public void setConfiguration(Configuration configuration) {
-        this.configuration = configuration == null ? new Configuration() : configuration;
+        this.configuration = new Configuration(configuration);
     }
 }

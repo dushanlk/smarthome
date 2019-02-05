@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -43,6 +43,7 @@ import org.slf4j.LoggerFactory;
  * Helper methods for generating the openHAB metadata.
  *
  * @author Gerhard Riegler - Initial contribution
+ * @author Michael Reitler - QuantityType support
  */
 
 public class MetadataUtils {
@@ -166,10 +167,10 @@ public class MetadataUtils {
      */
     public static String getStatePattern(HmDatapoint dp) {
         String unit = getUnit(dp);
-        if (unit != null) {
+        if (unit != null && unit != "") {
             String pattern = getPattern(dp);
             if (pattern != null) {
-                return String.format("%s %s", pattern, unit);
+                return String.format("%s %s", pattern, "%unit%");
             }
         }
         return null;
@@ -290,7 +291,46 @@ public class MetadataUtils {
                     && !channelType.equals(CHANNEL_TYPE_AKKU)) {
                 return ITEM_TYPE_DIMMER;
             } else {
-                return ITEM_TYPE_NUMBER;
+                // determine QuantityType
+                String unit = dp.getUnit() != null ? dp.getUnit() : "";
+                switch (unit) {
+                    case "Â°C":
+                    case "°C":
+                        return ITEM_TYPE_NUMBER + ":Temperature";
+                    case "V":
+                        return ITEM_TYPE_NUMBER + ":ElectricPotential";
+                    case "%":
+                        return ITEM_TYPE_NUMBER + ":Dimensionless";
+                    case "mHz":
+                    case "Hz":
+                        return ITEM_TYPE_NUMBER + ":Frequency";
+                    case "hPa":
+                        return ITEM_TYPE_NUMBER + ":Pressure";
+                    case "Lux":
+                        return ITEM_TYPE_NUMBER + ":Illuminance";
+                    case "degree":
+                        return ITEM_TYPE_NUMBER + ":Angle";
+                    case "km/h":
+                        return ITEM_TYPE_NUMBER + ":Speed";
+                    case "mm":
+                        return ITEM_TYPE_NUMBER + ":Length";
+                    case "W":
+                        return ITEM_TYPE_NUMBER + ":Power";
+                    case "Wh":
+                        return ITEM_TYPE_NUMBER + ":Energy";
+                    case "m3":
+                        return ITEM_TYPE_NUMBER + ":Volume";
+                    case "s":
+                    case "min":
+                    case "minutes":
+                    case "day":
+                    case "month":
+                    case "year":
+                    case "100%":
+                    case "":
+                    default:
+                        return ITEM_TYPE_NUMBER;
+                }
             }
         } else if (dp.isDateTimeType()) {
             return ITEM_TYPE_DATETIME;

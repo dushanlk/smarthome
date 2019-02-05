@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,6 +14,7 @@ package org.eclipse.smarthome.binding.mqtt.generic.internal.convention.homeassis
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
+import org.eclipse.smarthome.binding.mqtt.generic.internal.generic.ChannelStateUpdateListener;
 import org.eclipse.smarthome.binding.mqtt.generic.internal.values.OnOffValue;
 import org.eclipse.smarthome.core.thing.ThingUID;
 
@@ -55,18 +56,18 @@ public class ComponentBinarySensor extends AbstractComponent {
 
     protected Config config = new Config();
 
-    public ComponentBinarySensor(ThingUID thing, String componentID, String configJSON) {
-        super(thing, componentID);
-        config = new Gson().fromJson(configJSON, Config.class);
+    public ComponentBinarySensor(ThingUID thing, HaID haID, String configJSON,
+            @Nullable ChannelStateUpdateListener channelStateUpdateListener, Gson gson) {
+        super(thing, haID, configJSON, gson);
+        config = gson.fromJson(configJSON, Config.class);
 
         if (config.force_update) {
             throw new UnsupportedOperationException("Component:Sensor does not support forced updates");
         }
 
         channels.put(sensorChannelID,
-                new CChannel(thing, componentID, sensorChannelID,
-                        OnOffValue.createReceiveOnly(config.payload_on, config.payload_off, false), config.state_topic,
-                        null, config.name, config.unit_of_measurement));
+                new CChannel(this, sensorChannelID, new OnOffValue(config.payload_on, config.payload_off),
+                        config.state_topic, null, config.name, config.unit_of_measurement, channelStateUpdateListener));
     }
 
     @Override

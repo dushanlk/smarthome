@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,7 +12,7 @@
  */
 package org.eclipse.smarthome.binding.hue.test;
 
-import static org.eclipse.smarthome.binding.hue.HueBindingConstants.*;
+import static org.eclipse.smarthome.binding.hue.internal.HueBindingConstants.*;
 import static org.eclipse.smarthome.core.thing.Thing.PROPERTY_SERIAL_NUMBER;
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.assertThat;
