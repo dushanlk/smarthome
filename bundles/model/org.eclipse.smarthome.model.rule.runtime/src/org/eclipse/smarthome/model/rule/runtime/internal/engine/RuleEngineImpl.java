@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -76,8 +76,9 @@ public class RuleEngineImpl implements ItemRegistryChangeListener, StateChangeLi
 
     private final Logger logger = LoggerFactory.getLogger(RuleEngineImpl.class);
 
-    protected final ScheduledExecutorService scheduler = ThreadPoolManager
-            .getScheduledPool(RuleEngine.class.getSimpleName());
+    private static final String THREAD_POOL_NAME = "ruleEngine";
+
+    protected final ScheduledExecutorService scheduler = ThreadPoolManager.getScheduledPool(THREAD_POOL_NAME);
 
     private ItemRegistry itemRegistry;
     private ModelRepository modelRepository;
@@ -98,11 +99,6 @@ public class RuleEngineImpl implements ItemRegistryChangeListener, StateChangeLi
     public void activate() {
         injector = RulesStandaloneSetup.getInjector();
         triggerManager = new RuleTriggerManager(injector);
-
-        if (!isEnabled()) {
-            logger.info("Rule engine is disabled.");
-            return;
-        }
 
         logger.debug("Started rule engine");
 
@@ -268,7 +264,7 @@ public class RuleEngineImpl implements ItemRegistryChangeListener, StateChangeLi
     @Override
     public void modelChanged(String modelName, org.eclipse.smarthome.model.core.EventType type) {
         if (triggerManager != null) {
-            if (isEnabled() && modelName.endsWith("rules")) {
+            if (modelName.endsWith("rules")) {
                 RuleModel model = (RuleModel) modelRepository.getModel(modelName);
 
                 // remove the rules from the trigger sets
@@ -401,16 +397,6 @@ public class RuleEngineImpl implements ItemRegistryChangeListener, StateChangeLi
             context.newValue(QualifiedName.create(RulesJvmModelInferrer.VAR_PREVIOUS_STATE), oldThingStatus.toString());
             executeRule(rule, context);
         }
-    }
-
-    /**
-     * we need to be able to deactivate the rule execution, otherwise the Eclipse SmartHome designer would also execute
-     * the rules.
-     *
-     * @return true, if rules should be executed, false otherwise
-     */
-    private boolean isEnabled() {
-        return !"true".equalsIgnoreCase(System.getProperty("noRules"));
     }
 
     @Override

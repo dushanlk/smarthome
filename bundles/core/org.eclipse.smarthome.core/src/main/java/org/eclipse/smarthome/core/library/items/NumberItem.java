@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -211,7 +211,8 @@ public class NumberItem extends GenericItem {
         }
 
         if (dimension != null && unitProvider != null) {
-            return unitProvider.getUnit((Class<Quantity>) dimension);
+            // explicit cast to Class<? extends Quantity> as JDK compiler complains
+            return unitProvider.getUnit((Class<? extends Quantity>) dimension);
         }
 
         return null;

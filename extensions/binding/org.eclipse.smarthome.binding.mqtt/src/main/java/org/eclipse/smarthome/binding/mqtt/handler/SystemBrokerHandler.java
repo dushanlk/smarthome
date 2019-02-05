@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -49,6 +49,8 @@ public class SystemBrokerHandler extends AbstractBrokerHandler implements MqttSe
 
     protected final MqttService service;
 
+    protected String brokerID = "";
+
     public SystemBrokerHandler(Bridge thing, MqttService service) {
         super(thing);
         this.service = service;
@@ -57,31 +59,29 @@ public class SystemBrokerHandler extends AbstractBrokerHandler implements MqttSe
     @Override
     public void connectionStateChanged(MqttConnectionState state, @Nullable Throwable error) {
         Map<String, String> properties = new HashMap<>();
-        MqttBrokerConnection c = connection;
-        if (c == null) {
-            return;
-        }
 
-        properties.put(PROPERTY_URL, c.getHost() + ":" + String.valueOf(c.getPort()));
-        String username = c.getUser();
-        String password = c.getPassword();
+        properties.put(PROPERTY_URL, connection.getHost() + ":" + String.valueOf(connection.getPort()));
+        final String username = connection.getUser();
+        final String password = connection.getPassword();
         if (username != null && password != null) {
             properties.put(PROPERTY_USERNAME, username);
             properties.put(PROPERTY_PASSWORD, password);
         }
-        properties.put(PROPERTY_QOS, String.valueOf(c.getQos()));
-        properties.put(PROPERTY_RETAIN, String.valueOf(c.isRetain()));
-        MqttWillAndTestament lastWill = c.getLastWill();
+        properties.put(PROPERTY_QOS, String.valueOf(connection.getQos()));
+        properties.put(PROPERTY_RETAIN, String.valueOf(connection.isRetain()));
+        final MqttWillAndTestament lastWill = connection.getLastWill();
         if (lastWill != null) {
             properties.put(PROPERTY_LAST_WILL, lastWill.toString());
         } else {
             properties.put(PROPERTY_LAST_WILL, "");
         }
-        if (c.getReconnectStrategy() instanceof PeriodicReconnectStrategy) {
-            PeriodicReconnectStrategy s = (PeriodicReconnectStrategy) c.getReconnectStrategy();
-            properties.put(PROPERTY_RECONNECT_TIME, String.valueOf(s.getReconnectFrequency()));
+        if (connection.getReconnectStrategy() instanceof PeriodicReconnectStrategy) {
+            final PeriodicReconnectStrategy strategy = (PeriodicReconnectStrategy) connection.getReconnectStrategy();
+            if (strategy != null) {
+                properties.put(PROPERTY_RECONNECT_TIME, String.valueOf(strategy.getReconnectFrequency()));
+            }
         }
-        properties.put(PROPERTY_KEEP_ALIVE_TIME, String.valueOf(c.getKeepAliveInterval()));
+        properties.put(PROPERTY_KEEP_ALIVE_TIME, String.valueOf(connection.getKeepAliveInterval()));
 
         updateProperties(properties);
         super.connectionStateChanged(state, error);
@@ -93,20 +93,21 @@ public class SystemBrokerHandler extends AbstractBrokerHandler implements MqttSe
      * is no connection established yet.
      */
     @Override
-    public void brokerAdded(String connectionName, MqttBrokerConnection broker) {
-        if (!connectionName.equals(brokerID) || connection == broker) {
+    public void brokerAdded(String connectionName, MqttBrokerConnection addedConnection) {
+        if (!connectionName.equals(brokerID) || connection == addedConnection) {
             return;
         }
 
-        connection = broker;
+        this.connection = addedConnection;
         super.initialize();
     }
 
     @Override
-    public void brokerRemoved(String connectionName, MqttBrokerConnection broker) {
-        if (broker == connection) {
+    public void brokerRemoved(String connectionName, MqttBrokerConnection removedConnection) {
+        final MqttBrokerConnection connection = this.connection;
+        if (removedConnection == connection) {
             connection.removeConnectionObserver(this);
-            connection = null;
+            this.connection = null;
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, "@text/offline.sharedremoved");
             return;
         }
@@ -114,6 +115,7 @@ public class SystemBrokerHandler extends AbstractBrokerHandler implements MqttSe
 
     @Override
     public void initialize() {
+        this.brokerID = getThing().getConfiguration().get("brokerid").toString();
         service.addBrokersListener(this);
 
         connection = service.getBrokerConnection(brokerID);

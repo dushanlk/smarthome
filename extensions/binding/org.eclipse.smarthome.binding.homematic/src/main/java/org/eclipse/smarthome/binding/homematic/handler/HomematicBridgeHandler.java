@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,6 +18,7 @@ import static org.eclipse.smarthome.core.thing.Thing.*;
 import java.io.IOException;
 import java.util.Hashtable;
 import java.util.Map;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.jdt.annotation.NonNull;
@@ -62,6 +63,10 @@ public class HomematicBridgeHandler extends BaseBridgeHandler implements Homemat
     private static SimplePortPool portPool = new SimplePortPool();
 
     private final Object dutyCycleRatioUpdateLock = new Object();
+    private final Object initDisposeLock = new Object();
+
+    private Future<?> initializeFuture;
+    private boolean isDisposed;
 
     private HomematicConfig config;
     private HomematicGateway gateway;
@@ -73,6 +78,7 @@ public class HomematicBridgeHandler extends BaseBridgeHandler implements Homemat
 
     private final String ipv4Address;
     private boolean isInDutyCycle = false;
+    private int dutyCycleRatio = 0;
 
     public HomematicBridgeHandler(@NonNull Bridge bridge, HomematicTypeGenerator typeGenerator, String ipv4Address,
             HttpClient httpClient) {
@@ -84,13 +90,20 @@ public class HomematicBridgeHandler extends BaseBridgeHandler implements Homemat
 
     @Override
     public void initialize() {
-        config = createHomematicConfig();
-        registerDeviceDiscoveryService();
-        final HomematicBridgeHandler instance = this;
-        scheduler.execute(() -> {
+        synchronized (initDisposeLock) {
+            isDisposed = false;
+            initializeFuture = scheduler.submit(this::initializeInternal);
+        }
+    }
+
+    private void initializeInternal() {
+        synchronized (initDisposeLock) {
+            config = createHomematicConfig();
+            registerDeviceDiscoveryService();
+
             try {
                 String id = getThing().getUID().getId();
-                gateway = HomematicGatewayFactory.createGateway(id, config, instance, httpClient);
+                gateway = HomematicGatewayFactory.createGateway(id, config, this, httpClient);
                 configureThingProperties();
                 gateway.initialize();
 
@@ -109,15 +122,16 @@ public class HomematicBridgeHandler extends BaseBridgeHandler implements Homemat
                     }
                 }
                 gateway.startWatchdogs();
+
             } catch (IOException ex) {
                 updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, ex.getMessage());
                 logger.debug(
                         "Homematic bridge was set to OFFLINE-COMMUNICATION_ERROR due to the following exception: {}",
                         ex.getMessage(), ex);
-                dispose();
+                disposeInternal();
                 scheduleReinitialize();
             }
-        });
+        }
     }
 
     private void configureThingProperties() {
@@ -139,15 +153,28 @@ public class HomematicBridgeHandler extends BaseBridgeHandler implements Homemat
      * Schedules a reinitialization, if the Homematic gateway is not reachable at bridge startup.
      */
     private void scheduleReinitialize() {
-        scheduler.schedule(() -> {
-            initialize();
-        }, REINITIALIZE_DELAY_SECONDS, TimeUnit.SECONDS);
+        if (!isDisposed) {
+            initializeFuture = scheduler.schedule(this::initializeInternal, REINITIALIZE_DELAY_SECONDS,
+                    TimeUnit.SECONDS);
+        }
     }
 
     @Override
     public void dispose() {
+        synchronized (initDisposeLock) {
+            super.dispose();
+
+            if (initializeFuture != null) {
+                initializeFuture.cancel(true);
+            }
+
+            disposeInternal();
+            isDisposed = true;
+        }
+    }
+
+    private void disposeInternal() {
         logger.debug("Disposing bridge '{}'", getThing().getUID().getId());
-        super.dispose();
         if (discoveryService != null) {
             discoveryService.stopScan();
             unregisterDeviceDiscoveryService();
@@ -214,6 +241,9 @@ public class HomematicBridgeHandler extends BaseBridgeHandler implements Homemat
         HomematicConfig homematicConfig = getThing().getConfiguration().as(HomematicConfig.class);
         if (homematicConfig.getCallbackHost() == null) {
             homematicConfig.setCallbackHost(this.ipv4Address);
+        }
+        if (homematicConfig.getBindAddress() == null) {
+            homematicConfig.setBindAddress(homematicConfig.getCallbackHost());
         }
         if (homematicConfig.getXmlCallbackPort() == 0) {
             homematicConfig.setXmlCallbackPort(portPool.getNextPort());
@@ -341,6 +371,7 @@ public class HomematicBridgeHandler extends BaseBridgeHandler implements Homemat
     @Override
     public void onDutyCycleRatioUpdate(int dutyCycleRatio) {
         synchronized (dutyCycleRatioUpdateLock) {
+            this.dutyCycleRatio = dutyCycleRatio;
             Channel dutyCycleRatioChannel = thing.getChannel(CHANNEL_TYPE_DUTY_CYCLE_RATIO);
             if (dutyCycleRatioChannel != null) {
                 this.updateState(dutyCycleRatioChannel.getUID(), new DecimalType(dutyCycleRatio));
@@ -358,6 +389,15 @@ public class HomematicBridgeHandler extends BaseBridgeHandler implements Homemat
                 this.updateStatus(ThingStatus.ONLINE);
             }
         }
+    }
+
+    /**
+     * Returns the last value for the duty cycle ratio that was retrieved from the homematic gateway.
+     *
+     * @return The duty cycle ratio of the gateway
+     */
+    public int getDutyCycleRatio() {
+        return dutyCycleRatio;
     }
 
     @Override
@@ -385,6 +425,16 @@ public class HomematicBridgeHandler extends BaseBridgeHandler implements Homemat
         if (((HomematicThingHandler) childHandler).isDeletionPending()) {
             deleteFromGateway(UidUtils.getHomematicAddress(childThing), false, true, false);
         }
+    }
+
+    /**
+     * Updates the {@link HmDatapoint} by reloading the value from the homematic gateway.
+     *
+     * @param dp The HmDatapoint that shall be updated
+     * @throws IOException If there is a problem while communicating to the gateway
+     */
+    public void updateDatapoint(HmDatapoint dp) throws IOException {
+        getGateway().loadDatapointValue(dp);
     }
 
     /**

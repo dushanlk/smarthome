@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -229,6 +229,22 @@ public class ItemResourceOSGiTest extends JavaOSGiTest {
         dto.value = "some value";
         Response response = itemResource.addMetadata("nonExisting", "foo", dto);
         assertEquals(404, response.getStatus());
+    }
+
+    @Test
+    public void testAddMetadata_ValueEmtpy() {
+        MetadataDTO dto = new MetadataDTO();
+        dto.value = "";
+        Response response = itemResource.addMetadata(ITEM_NAME1, "foo", dto);
+        assertEquals(400, response.getStatus());
+    }
+
+    @Test
+    public void testAddMetadata_ValueNull() {
+        MetadataDTO dto = new MetadataDTO();
+        dto.value = null;
+        Response response = itemResource.addMetadata(ITEM_NAME1, "foo", dto);
+        assertEquals(400, response.getStatus());
     }
 
     @Test

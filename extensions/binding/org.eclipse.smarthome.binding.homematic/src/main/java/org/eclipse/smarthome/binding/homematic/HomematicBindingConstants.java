@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -68,4 +68,7 @@ public class HomematicBindingConstants {
     public static final int INSTALL_MODE_NORMAL = 1;
 
     public static final int CONFIGURATION_CHANNEL_NUMBER = -1;
+
+    public static final String RX_BURST_MODE = "BURST";
+    public static final String RX_WAKEUP_MODE = "WAKEUP";
 }

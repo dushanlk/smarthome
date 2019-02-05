@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,6 +12,8 @@
  */
 package org.eclipse.smarthome.binding.mqtt.handler;
 
+import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.io.transport.mqtt.MqttBrokerConnectionConfig;
 
 /**
@@ -21,14 +23,15 @@ import org.eclipse.smarthome.io.transport.mqtt.MqttBrokerConnectionConfig;
  *
  * @author David Graeff - Initial contribution
  */
+@NonNullByDefault
 public class BrokerHandlerConfig extends MqttBrokerConnectionConfig {
-    public Integer reconnectTime;
-    public Integer timeoutInMs;
+    public @Nullable Integer reconnectTime;
+    public @Nullable Integer timeoutInMs;
 
     // For more security, the following optional parameters can be altered
 
     public boolean certificatepin = false;
     public boolean publickeypin = false;
-    public String certificate;
-    public String publickey;
+    public String certificate = "";
+    public String publickey = "";
 }

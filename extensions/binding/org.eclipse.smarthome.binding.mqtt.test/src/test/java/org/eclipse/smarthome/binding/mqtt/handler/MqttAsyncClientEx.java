@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -31,7 +31,7 @@ import org.eclipse.smarthome.io.transport.mqtt.MqttConnectionState;
  * We need an extended MqttAsyncClientEx to overwrite the connection state.
  *
  * In respect to the success flags the operations publish, subscribe, unsubscribe, connect,
- * disconnect immediately succeed or fail.
+ * and disconnect immediately succeed or fail.
  *
  * @author David Graeff - Initial contribution
  */

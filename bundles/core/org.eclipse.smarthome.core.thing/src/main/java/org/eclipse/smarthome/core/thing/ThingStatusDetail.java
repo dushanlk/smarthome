@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -35,7 +35,8 @@ public enum ThingStatusDetail {
      * Device has been removed. Used for example when the device has been removed from its bridge and
      * the thing handler should be removed.
      */
-    GONE;
+    GONE,
+    DISABLED;
 
     public static final UninitializedStatus UNINITIALIZED = new UninitializedStatus();
     public static final NoneOnlyStatus INITIALIZING = new NoneOnlyStatus();

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -119,6 +119,7 @@ public class ScriptRuleTest extends JavaOSGiTest {
             Rule rule2 = ruleRegistry.get("javascript.rule1");
             assertThat(rule2, is(notNullValue()));
             RuleStatusInfo ruleStatus2 = ruleEngine.getStatusInfo(rule2.getUID());
+            assertThat(ruleStatus2, is(notNullValue()));
             assertThat(ruleStatus2.getStatus(), is(RuleStatus.IDLE));
         }, 10000, 200);
         Rule rule = ruleRegistry.get("javascript.rule1");

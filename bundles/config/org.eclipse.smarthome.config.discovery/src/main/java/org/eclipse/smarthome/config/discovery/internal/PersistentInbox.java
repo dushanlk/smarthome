@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -93,9 +93,7 @@ import org.slf4j.LoggerFactory;
 @Component(immediate = true, service = Inbox.class)
 public final class PersistentInbox implements Inbox, DiscoveryListener, ThingRegistryChangeListener {
 
-    /**
-     * Internal enumeration to identify the correct type of the event to be fired.
-     */
+    // Internal enumeration to identify the correct type of the event to be fired.
     private enum EventType {
         added,
         removed,
@@ -304,7 +302,8 @@ public final class PersistentInbox implements Inbox, DiscoveryListener, ThingReg
         if (discoveryResultStorage == null) {
             final ScheduledFuture<?> timeToLiveChecker = this.timeToLiveChecker;
             logger.error("The OSGi lifecycle has been violated (storage: {}, ttl checker cancelled: {}).",
-                    this.discoveryResultStorage == null ? "null" : this.discoveryResultStorage, timeToLiveChecker == null ? "null" : timeToLiveChecker.isCancelled());
+                    this.discoveryResultStorage == null ? "null" : this.discoveryResultStorage,
+                    timeToLiveChecker == null ? "null" : timeToLiveChecker.isCancelled());
             return Stream.empty();
         }
         final Collection<@Nullable DiscoveryResult> values = discoveryResultStorage.getValues();

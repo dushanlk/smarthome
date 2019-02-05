@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,7 +14,6 @@ package org.eclipse.smarthome.binding.bosesoundtouch.internal;
 
 import static org.eclipse.smarthome.binding.bosesoundtouch.BoseSoundTouchBindingConstants.*;
 
-import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -57,6 +56,28 @@ public class CommandExecutor implements AvailableSources {
         this.handler = handler;
         init();
     }
+    
+    /**
+     * Synchronizes the underlying storage container with the current value for the presets stored on the player
+     * by updating the available ones and deleting the cleared ones
+     * 
+     * @param playerPresets a Map<Integer, ContentItems> containing the items currently stored on the player
+     */
+    public void updatePresetContainerFromPlayer(Map<Integer, ContentItem> playerPresets) {
+        playerPresets.forEach((k,v) -> {
+            try {
+                if (v != null) {
+                    handler.getPresetContainer().put(k, v);                    
+                } else {
+                    handler.getPresetContainer().remove(k);
+                }
+            } catch (ContentItemNotPresetableException e) {
+                logger.debug("{}: ContentItem is not presetable", handler.getDeviceName());
+            }
+        });
+        
+        handler.refreshPresetChannel();
+    }
 
     /**
      * Adds a ContentItem to the PresetContainer
@@ -72,6 +93,7 @@ public class CommandExecutor implements AvailableSources {
         } catch (ContentItemNotPresetableException e) {
             logger.debug("{}: ContentItem is not presetable", handler.getDeviceName());
         }
+        handler.refreshPresetChannel();
     }
 
     /**
@@ -96,12 +118,8 @@ public class CommandExecutor implements AvailableSources {
     public void getInformations(APIRequest apiRequest) {
         String msg = "<msg><header " + "deviceID=\"" + handler.getMacAddress() + "\"" + " url=\"" + apiRequest
                 + "\" method=\"GET\"><request requestID=\"0\"><info type=\"new\"/></request></header></msg>";
-        try {
-            handler.getSession().getRemote().sendString(msg);
-            logger.debug("{}: sending request: {}", handler.getDeviceName(), msg);
-        } catch (IOException e) {
-            handler.onWebSocketError(e);
-        }
+        handler.getSession().getRemote().sendStringByFuture(msg);
+        logger.debug("{}: sending request: {}", handler.getDeviceName(), msg);
     }
 
     /**
@@ -191,7 +209,7 @@ public class CommandExecutor implements AvailableSources {
     public void postPlayerControl(Command command) {
         if (command.equals(PlayPauseType.PLAY)) {
             if (currentOperationMode == OperationModeType.STANDBY) {
-                postRemoteKey(RemoteKeyType.PLAY_PAUSE);
+                postRemoteKey(RemoteKeyType.POWER);
             } else {
                 postRemoteKey(RemoteKeyType.PLAY);
             }
@@ -357,9 +375,9 @@ public class CommandExecutor implements AvailableSources {
                 + "\" method=\"POST\"><request requestID=\"" + id + "\"><info " + infoAddon
                 + " type=\"new\"/></request></header><body>" + postData + "</body></msg>";
         try {
-            handler.getSession().getRemote().sendString(msg);
+            handler.getSession().getRemote().sendStringByFuture(msg);
             logger.debug("{}: sending request: {}", handler.getDeviceName(), msg);
-        } catch (IOException | NullPointerException e) {
+        } catch (NullPointerException e) {
             handler.onWebSocketError(e);
         }
     }

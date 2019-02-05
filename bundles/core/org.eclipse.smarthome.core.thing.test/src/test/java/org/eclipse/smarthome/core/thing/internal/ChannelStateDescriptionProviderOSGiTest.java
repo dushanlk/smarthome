@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -51,6 +51,7 @@ import org.eclipse.smarthome.core.thing.binding.ThingHandlerFactory;
 import org.eclipse.smarthome.core.thing.link.ItemChannelLink;
 import org.eclipse.smarthome.core.thing.link.ItemChannelLinkRegistry;
 import org.eclipse.smarthome.core.thing.type.ChannelDefinition;
+import org.eclipse.smarthome.core.thing.type.ChannelDefinitionBuilder;
 import org.eclipse.smarthome.core.thing.type.ChannelType;
 import org.eclipse.smarthome.core.thing.type.ChannelTypeProvider;
 import org.eclipse.smarthome.core.thing.type.ChannelTypeUID;
@@ -108,13 +109,13 @@ public class ChannelStateDescriptionProviderOSGiTest extends JavaOSGiTest {
         final ChannelType channelType2 = new ChannelType(new ChannelTypeUID("hue:num"), false, "Number", " ", "", null,
                 null, state2, null);
         final ChannelType channelType3 = new ChannelType(new ChannelTypeUID("hue:info"), true, "String", " ", "", null,
-                null, null, null);
+                null, (StateDescription) null, null);
         final ChannelType channelType4 = new ChannelType(new ChannelTypeUID("hue:color"), false, "Color", "Color", "",
-                "ColorLight", null, null, null);
+                "ColorLight", null, (StateDescription) null, null);
         final ChannelType channelType5 = new ChannelType(new ChannelTypeUID("hue:brightness"), false, "Dimmer",
-                "Brightness", "", "DimmableLight", null, null, null);
+                "Brightness", "", "DimmableLight", null, (StateDescription) null, null);
         final ChannelType channelType6 = new ChannelType(new ChannelTypeUID("hue:switch"), false, "Switch", "Switch",
-                "", "Light", null, null, null);
+                "", "Light", null, (StateDescription) null, null);
         final ChannelType channelType7 = new ChannelType(new ChannelTypeUID("hue:num-dynamic"), false, "Number", " ",
                 "", "Light", null, state, null);
 
@@ -168,14 +169,14 @@ public class ChannelStateDescriptionProviderOSGiTest extends JavaOSGiTest {
         });
 
         List<ChannelDefinition> channelDefinitions = new ArrayList<>();
-        channelDefinitions.add(new ChannelDefinition("1", channelType.getUID()));
-        channelDefinitions.add(new ChannelDefinition("2", channelType2.getUID()));
-        channelDefinitions.add(new ChannelDefinition("3", channelType3.getUID()));
-        channelDefinitions.add(new ChannelDefinition("4", channelType4.getUID()));
-        channelDefinitions.add(new ChannelDefinition("5", channelType5.getUID()));
-        channelDefinitions.add(new ChannelDefinition("6", channelType6.getUID()));
-        channelDefinitions.add(new ChannelDefinition("7_1", channelType7.getUID()));
-        channelDefinitions.add(new ChannelDefinition("7_2", channelType7.getUID()));
+        channelDefinitions.add(new ChannelDefinitionBuilder("1", channelType.getUID()).build());
+        channelDefinitions.add(new ChannelDefinitionBuilder("2", channelType2.getUID()).build());
+        channelDefinitions.add(new ChannelDefinitionBuilder("3", channelType3.getUID()).build());
+        channelDefinitions.add(new ChannelDefinitionBuilder("4", channelType4.getUID()).build());
+        channelDefinitions.add(new ChannelDefinitionBuilder("5", channelType5.getUID()).build());
+        channelDefinitions.add(new ChannelDefinitionBuilder("6", channelType6.getUID()).build());
+        channelDefinitions.add(new ChannelDefinitionBuilder("7_1", channelType7.getUID()).build());
+        channelDefinitions.add(new ChannelDefinitionBuilder("7_2", channelType7.getUID()).build());
 
         registerService(new SimpleThingTypeProvider(Collections.singleton(ThingTypeBuilder
                 .instance(new ThingTypeUID("hue:lamp"), "label").withChannelDefinitions(channelDefinitions).build())));

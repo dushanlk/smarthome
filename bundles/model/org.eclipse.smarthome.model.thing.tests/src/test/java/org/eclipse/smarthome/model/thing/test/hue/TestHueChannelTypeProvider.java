@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,13 +18,16 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 
-import org.eclipse.smarthome.core.thing.type.ChannelDefinition;
+import org.eclipse.smarthome.core.thing.type.ChannelDefinitionBuilder;
 import org.eclipse.smarthome.core.thing.type.ChannelGroupType;
 import org.eclipse.smarthome.core.thing.type.ChannelGroupTypeBuilder;
+import org.eclipse.smarthome.core.thing.type.ChannelGroupTypeProvider;
 import org.eclipse.smarthome.core.thing.type.ChannelGroupTypeUID;
 import org.eclipse.smarthome.core.thing.type.ChannelType;
+import org.eclipse.smarthome.core.thing.type.ChannelTypeBuilder;
 import org.eclipse.smarthome.core.thing.type.ChannelTypeProvider;
 import org.eclipse.smarthome.core.thing.type.ChannelTypeUID;
+import org.osgi.service.component.annotations.Component;
 
 /**
  *
@@ -33,7 +36,8 @@ import org.eclipse.smarthome.core.thing.type.ChannelTypeUID;
  * @author Dennis Nobel - Initial contribution
  *
  */
-public class TestHueChannelTypeProvider implements ChannelTypeProvider {
+@Component
+public class TestHueChannelTypeProvider implements ChannelTypeProvider, ChannelGroupTypeProvider {
 
     public static final ChannelTypeUID COLORX_TEMP_CHANNEL_TYPE_UID = new ChannelTypeUID("Xhue:Xcolor_temperature");
     public static final ChannelTypeUID COLORX_CHANNEL_TYPE_UID = new ChannelTypeUID("Xhue:color");
@@ -47,23 +51,33 @@ public class TestHueChannelTypeProvider implements ChannelTypeProvider {
 
     public TestHueChannelTypeProvider() {
         try {
-            ChannelType ctColor = new ChannelType(COLOR_CHANNEL_TYPE_UID, false, "Color", "colorLabel", "description",
-                    null, null, null, new URI("hue", "LCT001:color", null));
-            ChannelType ctColorTemperature = new ChannelType(COLOR_TEMP_CHANNEL_TYPE_UID, false, "Dimmer",
-                    "colorTemperatureLabel", "description", null, null, null,
-                    new URI("hue", "LCT001:color_temperature", null));
-            ChannelType ctColorX = new ChannelType(COLORX_CHANNEL_TYPE_UID, false, "Color", "colorLabel", "description",
-                    null, null, null, new URI("Xhue", "XLCT001:Xcolor", null));
-            ChannelType ctColorTemperatureX = new ChannelType(COLORX_TEMP_CHANNEL_TYPE_UID, false, "Dimmer",
-                    "colorTemperatureLabel", "description", null, null, null,
-                    new URI("Xhue", "XLCT001:Xcolor_temperature", null));
+            ChannelType ctColor = ChannelTypeBuilder.state(COLOR_CHANNEL_TYPE_UID, "colorLabel", "Color")
+                    .withDescription("description").withConfigDescriptionURI(new URI("hue", "LCT001:color", null))
+                    .build();
+
+            ChannelType ctColorTemperature = ChannelTypeBuilder
+                    .state(COLOR_TEMP_CHANNEL_TYPE_UID, "colorTemperatureLabel", "Dimmer")
+                    .withDescription("description")
+                    .withConfigDescriptionURI(new URI("hue", "LCT001:color_temperature", null)).build();
+
+            ChannelType ctColorX = ChannelTypeBuilder.state(COLORX_CHANNEL_TYPE_UID, "colorLabel", "Color")
+                    .withDescription("description").withConfigDescriptionURI(new URI("Xhue", "XLCT001:Xcolor", null))
+                    .build();
+
+            ChannelType ctColorTemperatureX = ChannelTypeBuilder
+                    .state(COLORX_TEMP_CHANNEL_TYPE_UID, "colorTemperatureLabel", "Dimmer")
+                    .withDescription("description")
+                    .withConfigDescriptionURI(new URI("Xhue", "XLCT001:Xcolor_temperature", null)).build();
+
             channelTypes = Arrays.asList(ctColor, ctColorTemperature, ctColorX, ctColorTemperatureX);
 
             ChannelGroupType groupX = ChannelGroupTypeBuilder.instance(GROUP_CHANNEL_GROUP_TYPE_UID, "Channel Group")
                     .withDescription("Channel Group")
                     .withChannelDefinitions(Arrays.asList(
-                            new ChannelDefinition("foo", TestHueChannelTypeProvider.COLOR_CHANNEL_TYPE_UID),
-                            new ChannelDefinition("bar", TestHueChannelTypeProvider.COLOR_CHANNEL_TYPE_UID)))
+                            new ChannelDefinitionBuilder("foo", TestHueChannelTypeProvider.COLOR_CHANNEL_TYPE_UID)
+                                    .build(),
+                            new ChannelDefinitionBuilder("bar", TestHueChannelTypeProvider.COLOR_CHANNEL_TYPE_UID)
+                                    .build()))
                     .build();
             channelGroupTypes = Arrays.asList(groupX);
 

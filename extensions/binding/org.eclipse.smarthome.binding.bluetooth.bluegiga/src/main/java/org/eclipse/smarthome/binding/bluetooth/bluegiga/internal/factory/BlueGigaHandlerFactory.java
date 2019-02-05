@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -88,10 +88,9 @@ public class BlueGigaHandlerFactory extends BaseThingHandlerFactory {
     protected synchronized void removeHandler(ThingHandler thingHandler) {
         if (thingHandler instanceof BluetoothAdapter) {
             UID uid = ((BluetoothAdapter) thingHandler).getUID();
-            ServiceRegistration<?> serviceReg = this.serviceRegs.get(uid);
+            ServiceRegistration<?> serviceReg = this.serviceRegs.remove(uid);
             if (serviceReg != null) {
                 serviceReg.unregister();
-                serviceRegs.remove(uid);
             }
         }
     }

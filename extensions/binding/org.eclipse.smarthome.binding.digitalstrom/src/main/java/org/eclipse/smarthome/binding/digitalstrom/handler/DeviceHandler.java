@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -414,7 +414,8 @@ public class DeviceHandler extends BaseThingHandler implements DeviceStatusListe
         if (value <= 0 || max <= 0) {
             return 0;
         }
-        return new BigDecimal(value * ((float) 100 / max)).setScale(0, BigDecimal.ROUND_HALF_UP).intValue();
+        int percentValue = new BigDecimal(value * ((float) 100 / max)).setScale(0, BigDecimal.ROUND_HALF_UP).intValue();
+        return percentValue < 0 ? 0 : percentValue > 100 ? 100 : percentValue;
     }
 
     @Override

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,6 +14,7 @@ package org.eclipse.smarthome.binding.homematic.internal.communicator;
 
 import java.io.IOException;
 
+import org.eclipse.smarthome.binding.homematic.HomematicBindingConstants;
 import org.eclipse.smarthome.binding.homematic.internal.misc.HomematicClientException;
 import org.eclipse.smarthome.binding.homematic.internal.model.HmChannel;
 import org.eclipse.smarthome.binding.homematic.internal.model.HmDatapoint;
@@ -64,6 +65,13 @@ public interface HomematicGateway {
     public void loadChannelValues(HmChannel channel) throws IOException;
 
     /**
+     * Loads the value of the given {@link HmDatapoint} from the device.
+     * 
+     * @param dp The HmDatapoint that shall be loaded
+     */
+    public void loadDatapointValue(HmDatapoint dp) throws IOException;
+
+    /**
      * Reenumerates the set of VALUES datapoints for the given channel.
      */
     public void updateChannelValueDatapoints(HmChannel channel) throws IOException;
@@ -75,8 +83,16 @@ public interface HomematicGateway {
 
     /**
      * Sends the datapoint to the Homematic gateway or executes virtual datapoints.
+     * 
+     * @param dp The datapoint to send/execute
+     * @param dpConfig The configuration of the datapoint
+     * @param newValue The new value for the datapoint
+     * @param rxMode The rxMode with which the value should be sent to the device
+     *            ({@link HomematicBindingConstants#RX_BURST_MODE "BURST"} for burst mode,
+     *            {@link HomematicBindingConstants#RX_WAKEUP_MODE "WAKEUP"} for wakeup mode, or null for the default
+     *            mode)
      */
-    public void sendDatapoint(HmDatapoint dp, HmDatapointConfig dpConfig, Object newValue)
+    public void sendDatapoint(HmDatapoint dp, HmDatapointConfig dpConfig, Object newValue, String rxMode)
             throws IOException, HomematicClientException;
 
     /**

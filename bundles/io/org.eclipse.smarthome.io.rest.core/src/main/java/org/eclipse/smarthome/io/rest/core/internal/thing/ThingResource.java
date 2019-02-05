@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -62,6 +62,7 @@ import org.eclipse.smarthome.core.thing.Channel;
 import org.eclipse.smarthome.core.thing.ChannelUID;
 import org.eclipse.smarthome.core.thing.ManagedThingProvider;
 import org.eclipse.smarthome.core.thing.Thing;
+import org.eclipse.smarthome.core.thing.ThingManager;
 import org.eclipse.smarthome.core.thing.ThingRegistry;
 import org.eclipse.smarthome.core.thing.ThingStatusInfo;
 import org.eclipse.smarthome.core.thing.ThingTypeUID;
@@ -146,6 +147,7 @@ public class ThingResource implements RESTResource {
     private ThingStatusInfoI18nLocalizationService thingStatusInfoI18nLocalizationService;
     private FirmwareUpdateService firmwareUpdateService;
     private FirmwareRegistry firmwareRegistry;
+    private ThingManager thingManager;
 
     private LocaleService localeService;
 
@@ -399,7 +401,7 @@ public class ThingResource implements RESTResource {
     @Path("/{thingUID}/config")
     @Consumes(MediaType.APPLICATION_JSON)
     @ApiOperation(value = "Updates thing's configuration.")
-    @ApiResponses(value = { @ApiResponse(code = 200, message = "OK", response = Thing.class),
+    @ApiResponses(value = { @ApiResponse(code = 200, message = "OK", response = ThingDTO.class),
             @ApiResponse(code = 400, message = "Configuration of the thing is not valid."),
             @ApiResponse(code = 404, message = "Thing not found"),
             @ApiResponse(code = 409, message = "Thing could not be updated as it is not editable.") })
@@ -471,6 +473,33 @@ public class ThingResource implements RESTResource {
         ThingStatusInfo thingStatusInfo = thingStatusInfoI18nLocalizationService.getLocalizedThingStatusInfo(thing,
                 localeService.getLocale(language));
         return Response.ok().entity(thingStatusInfo).build();
+    }
+
+    @PUT
+    @RolesAllowed({ Role.USER, Role.ADMIN })
+    @Path("/{thingUID}/enable")
+    @ApiOperation(value = "Sets the thing enabled status.")
+    @ApiResponses(value = { @ApiResponse(code = 200, message = "OK", response = String.class),
+            @ApiResponse(code = 404, message = "Thing not found.") })
+    public Response setEnabled(@HeaderParam(HttpHeaders.ACCEPT_LANGUAGE) String language,
+            @PathParam("thingUID") @ApiParam(value = "thing") String thingUID,
+            @ApiParam(value = "enabled") String enabled) throws IOException {
+        final Locale locale = localeService.getLocale(language);
+
+        ThingUID thingUIDObject = new ThingUID(thingUID);
+
+        // Check if the Thing exists, 404 if not
+        Thing thing = thingRegistry.get(thingUIDObject);
+        if (null == thing) {
+            logger.info("Received HTTP PUT request for set enabled at '{}' for the unknown thing '{}'.",
+                    uriInfo.getPath(), thingUID);
+            return getThingNotFoundResponse(thingUID);
+        }
+
+        thingManager.setEnabled(thingUIDObject, Boolean.valueOf(enabled));
+
+        // everything went well
+        return getThingResponse(Status.OK, thing, locale, null);
     }
 
     @GET
@@ -778,6 +807,15 @@ public class ThingResource implements RESTResource {
         this.firmwareUpdateService = null;
     }
 
+    @Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC)
+    protected void setThingManager(ThingManager thingManager) {
+        this.thingManager = thingManager;
+    }
+
+    protected void unsetThingManager(ThingManager thingManager) {
+        this.thingManager = null;
+    }
+
     private Map<String, Object> normalizeConfiguration(Map<String, Object> properties, ThingTypeUID thingTypeUID,
             ThingUID thingUID) {
         if (properties == null || properties.isEmpty()) {
@@ -881,7 +919,7 @@ public class ThingResource implements RESTResource {
                 && managedItemChannelLinkProvider != null && managedItemProvider != null && managedThingProvider != null
                 && thingRegistry != null && configStatusService != null && configDescRegistry != null
                 && thingTypeRegistry != null && channelTypeRegistry != null && firmwareUpdateService != null
-                && thingStatusInfoI18nLocalizationService != null && firmwareRegistry != null && localeService != null;
+                && thingStatusInfoI18nLocalizationService != null && firmwareRegistry != null && localeService != null && thingManager != null;
     }
 
 }

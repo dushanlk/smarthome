@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.concurrent.CompletableFuture;
 
 import org.eclipse.smarthome.binding.onewire.internal.OwException;
 import org.eclipse.smarthome.binding.onewire.internal.OwPageBuffer;
@@ -47,7 +48,7 @@ public class OwserverTestServer {
         serverSocket = new ServerSocket(port);
     }
 
-    public void startServer() throws IOException {
+    public void startServer(CompletableFuture<Boolean> serverStarted) throws IOException {
         isRunning = true;
 
         new Thread() {
@@ -55,6 +56,7 @@ public class OwserverTestServer {
             public void run() {
                 OwserverPacket receivedPacket;
                 ArrayList<OwserverPacket> answerPackets;
+                serverStarted.complete(true);
                 try {
                     while (isRunning) {
                         connectionSocket = serverSocket.accept();
@@ -96,17 +98,10 @@ public class OwserverTestServer {
                 returnPacket.setPayload("");
                 returnPackets.add(returnPacket);
                 break;
-            case DIR:
-                returnPacket.setPayload("sensor0");
+            case DIRALL:
+                returnPacket.setPayload("/00.0123456789ab,/00.0123456789ac,/00.0123456789ad,/statistics");
                 returnPackets.add(returnPacket);
                 returnPacket = new OwserverPacket(OwserverPacketType.RETURN);
-                returnPacket.setPayload("sensor1");
-                returnPackets.add(returnPacket);
-                returnPacket = new OwserverPacket(OwserverPacketType.RETURN);
-                returnPacket.setPayload("sensor2");
-                returnPackets.add(returnPacket);
-                returnPacket = new OwserverPacket(OwserverPacketType.RETURN);
-                returnPackets.add(returnPacket);
                 break;
             case PRESENT:
                 switch (inputPacket.getPayloadString()) {
@@ -130,11 +125,14 @@ public class OwserverTestServer {
                         returnPacket.setPayload("    17.4");
                         returnPackets.add(returnPacket);
                         break;
+                    case "testsensor/decimalarray":
+                        returnPacket.setPayload("        3834,           0");
+                        returnPackets.add(returnPacket);
+                        break;
                     default:
                 }
                 break;
             case WRITE:
-                returnPacket.setPayload(inputPacket.getPayloadString());
                 returnPackets.add(returnPacket);
                 break;
             default:

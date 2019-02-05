@@ -72,41 +72,54 @@
         }
 
         function getOne(condition, callback, refresh) {
+            var deferred = $q.defer();
+
             var element = find(condition);
             if (element != null && !self.dirty && !refresh) {
-                resolveSingleElement(callback, element)
+                resolveSingleElement(element).then(function(singleElement) {
+                    if (callback) {
+                        callback(singleElement);
+                    }
+                    deferred.resolve(singleElement);
+                });
             } else {
                 getAll(null, true).then(function(res) {
+                    resolveSingleElement(find(condition)).then(function(singleElement) {
+                        if (callback) {
+                            callback(singleElement);
+                        }
+                        deferred.resolve(singleElement);
+                    });
+                }, function(res) {
                     if (callback) {
-                        resolveSingleElement(callback, find(condition));
-                        return;
-                    } else {
-                        return;
+                        callback(null);
                     }
-                }, function(res) {
-                    callback(null);
-                    return;
-                }, function(res) {
-                    return;
+                    deferred.resolve(null);
                 });
             }
+
+            return deferred.promise;
         }
 
-        function resolveSingleElement(callback, element) {
+        function resolveSingleElement(element) {
+            var deferred = $q.defer();
+
             if (!element) {
-                callback(undefined);
+                deferred.resolve(undefined);
             } else if (getOneFunction && self.singleElements[element.UID]) {
-                callback(self.singleElements[element.UID]);
+                deferred.resolve(self.singleElements[element.UID]);
             } else if (getOneFunction) {
                 var parameter = {};
                 parameter[idParameterName] = element[elmentId];
                 getOneFunction(parameter, function(singleElement) {
                     self.singleElements[element.UID] = singleElement;
-                    callback(singleElement)
+                    deferred.resolve(singleElement);
                 })
             } else {
-                callback(element);
+                deferred.resolve(element);
             }
+
+            return deferred.promise;
         }
 
         function find(condition) {

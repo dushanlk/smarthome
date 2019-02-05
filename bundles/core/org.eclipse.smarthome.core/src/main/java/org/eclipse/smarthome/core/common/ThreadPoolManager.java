@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -126,6 +126,7 @@ public class ThreadPoolManager {
                     pool = new WrappedScheduledExecutorService(cfg, new NamedThreadFactory(poolName));
                     ((ThreadPoolExecutor) pool).setKeepAliveTime(THREAD_TIMEOUT, TimeUnit.SECONDS);
                     ((ThreadPoolExecutor) pool).allowCoreThreadTimeOut(true);
+                    ((ScheduledThreadPoolExecutor)pool).setRemoveOnCancelPolicy(true);
                     pools.put(poolName, pool);
                     LOGGER.debug("Created scheduled thread pool '{}' of size {}", new Object[] { poolName, cfg });
                 }

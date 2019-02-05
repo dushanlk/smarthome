@@ -7,10 +7,10 @@ This binding integrates internet radios based on the [Frontier Silicon chipset](
 Successfully tested are internet radios:
 
  * [Hama IR100](https://de.hama.com/00054823/hama-internetradio-ir110)
- * [Medion MD87180, MD86988, MD86955](http://internetradio.medion.com/)
- * [Silvercrest SMRS18A1, SMRS30A1, SMRS35A1](http://www.silvercrest-multiroom.de/en/products/stereo-internet-radio/)
+ * [Medion MD87180, MD86988, MD86955, MD87528](http://internetradio.medion.com/)
+ * [Silvercrest SMRS18A1, SMRS30A1, SMRS35A1, SIRD 14 C2](http://www.silvercrest-multiroom.de/en/products/stereo-internet-radio/)
  * [Roberts Stream 83i and 93i](https://www.robertsradio.com/uk/products/radio/smart-radio/)
- * [Auna Connect 150](https://www.auna.de/Radios/Internetradios/)
+ * [Auna Connect 150, Auna KR200](https://www.auna.de/Radios/Internetradios/)
  * [TechniSat DIGITRADIO 350 IR and 850](https://www.technisat.com/en_XX/DAB+-Radios-with-Internetradio/352-10996/)
  * [TTMicro AS Pinell Supersound](http://www.ttmicro.no/radio)
  * [Revo SuperConnect](https://revo.co.uk/products/)
@@ -66,13 +66,15 @@ All devices support some of the following channels:
 The radio mode depends on the internet radio model (and its firmware version!).
 This list is just an example how the mapping looks like for some of the devices, please try it out and adjust your sitemap for your particular radio.
 
-| Radio Mode               | 0              | 1                       | 2         | 3            | 4         | 5        | 6         | 7  | 8         |
-|--------------------------|----------------|-------------------------|-----------|--------------|-----------|----------|-----------|----|-----------|
-| Hama IR110               | Internet Radio | Spotify                 | Player    | AUX in       | -         | -        | -         | -  | -         |
-| Medion MD87180           | Internet Radio | Music Player (USB, LAN) | DAB Radio | FM Radio     | AUX in    | -        | -         | -  | -         |
-| Medion MD 86988          | Internet Radio | Music Player            | FM Radio  | AUX in       | -         | -        | -         | -  | -         |
-| Technisat DigitRadio 580 | Internet Radio | Spotify                 | -         | Music Player | DAB Radio | FM Radio | AUX in    | CD | Bluetooth |
-| Dual IR 3a               | Internet Radio | Spotify                 | -         | Music Player | DAB Radio | FM Radio | Bluetooth | -  | -         |
+| Radio Mode               | 0              | 1                       | 2         | 3            | 4         | 5        | 6            | 7         | 8         | 9      |
+|--------------------------|----------------|-------------------------|-----------|--------------|-----------|----------|--------------|-----------|-----------| -------|
+| Hama IR110               | Internet Radio | Spotify                 | Player    | AUX in       | -         | -        | -            | -         | -         | -      |
+| Medion MD87180           | Internet Radio | Music Player (USB, LAN) | DAB Radio | FM Radio     | AUX in    | -        | -            | -         | -         | -      |
+| Medion MD 86988          | Internet Radio | Music Player            | FM Radio  | AUX in       | -         | -        | -            | -         | -         | -      |
+| Technisat DigitRadio 580 | Internet Radio | Spotify                 | -         | Music Player | DAB Radio | FM Radio | AUX in       | CD        | Bluetooth | -      |
+| Dual IR 3a               | Internet Radio | Spotify                 | -         | Music Player | DAB Radio | FM Radio | Bluetooth    | -         | -         | -      |
+| Silvercrest SIRD 14 C2   | Internet Radio | TIDAL                   | Deezer    | Qobuz        | Spotify   | -        | Music Player | DAB Radio | FM Radio  | AUX in |
+| Auna KR200 Kitchen Radio | Internet Radio | Spotify                 | -         | Music Player | DAB Radio | FM Radio | AUX in       | -         | -         | -      |
 
 
 ## Full Example

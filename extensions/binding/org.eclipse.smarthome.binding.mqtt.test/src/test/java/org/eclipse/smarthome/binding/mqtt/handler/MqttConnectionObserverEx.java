@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,10 +25,10 @@ import org.eclipse.smarthome.io.transport.mqtt.MqttConnectionState;
  * @author David Graeff - Initial contribution
  */
 public class MqttConnectionObserverEx implements MqttConnectionObserver {
-    int counter = 0;
-    Semaphore semaphore = new Semaphore(1);
+    public int counter = 0;
+    public Semaphore semaphore = new Semaphore(1);
 
-    MqttConnectionObserverEx() throws InterruptedException {
+    public MqttConnectionObserverEx() throws InterruptedException {
         semaphore.acquire();
     }
 

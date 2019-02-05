@@ -5,12 +5,13 @@ Bundle-Name: Eclipse SmartHome Net I/O Bundle
 Bundle-RequiredExecutionEnvironment: JavaSE-1.8
 Bundle-SymbolicName: org.eclipse.smarthome.io.net
 Bundle-Vendor: Eclipse.org/SmartHome
-Bundle-Version: 0.10.0.qualifier
+Bundle-Version: 0.11.0.qualifier
 Export-Package: 
  org.eclipse.smarthome.io.net.exec,
  org.eclipse.smarthome.io.net.http
 Import-Package: 
  javax.net.ssl,
+ javax.security.auth.x500,
  javax.servlet.http,
  org.apache.commons.exec,
  org.apache.commons.lang,
@@ -24,6 +25,10 @@ Import-Package:
  org.eclipse.jetty.util.component,
  org.eclipse.jetty.util.ssl,
  org.eclipse.jetty.util.thread,
+ org.eclipse.jetty.websocket.api,
+ org.eclipse.jetty.websocket.api.extensions,
+ org.eclipse.jetty.websocket.client,
+ org.eclipse.jetty.websocket.common.scopes,
  org.eclipse.smarthome.core.library.types,
  org.eclipse.smarthome.io.net.exec,
  org.eclipse.smarthome.io.net.http,

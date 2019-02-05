@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,9 +17,11 @@ import static org.eclipse.smarthome.binding.bosesoundtouch.BoseSoundTouchBinding
 import java.io.IOException;
 import java.math.BigInteger;
 import java.net.InetAddress;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import javax.jmdns.ServiceInfo;
@@ -28,6 +30,7 @@ import org.eclipse.smarthome.binding.bosesoundtouch.BoseSoundTouchConfiguration;
 import org.eclipse.smarthome.config.discovery.DiscoveryResult;
 import org.eclipse.smarthome.config.discovery.DiscoveryResultBuilder;
 import org.eclipse.smarthome.config.discovery.mdns.MDNSDiscoveryParticipant;
+import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.ThingTypeUID;
 import org.eclipse.smarthome.core.thing.ThingUID;
 import org.osgi.service.component.annotations.Component;
@@ -52,20 +55,35 @@ public class SoundTouchDiscoveryParticipant implements MDNSDiscoveryParticipant 
     }
 
     @Override
+    @SuppressWarnings("deprecation")
     public DiscoveryResult createResult(ServiceInfo info) {
         DiscoveryResult result = null;
         ThingUID uid = getThingUID(info);
         if (uid != null) {
 
-            Map<String, Object> properties = new HashMap<>(2);
-            String label = "Bose SoundTouch";
-            try {
-                label = info.getName();
-            } catch (Exception e) {
-                // ignore and use default label
-            }
             // remove the domain from the name
             InetAddress[] addrs = info.getInetAddresses();
+
+            Map<String, Object> properties = new HashMap<>(2);
+            
+            String label = null;
+            if (BST_10_THING_TYPE_UID.equals(uid.getThingTypeUID())) {
+                try {
+                    String group = DiscoveryUtil
+                            .executeUrl("http://" + addrs[0].getHostAddress() + ":8090/getGroup");
+                    label = DiscoveryUtil.getContentOfFirstElement(group, "name");
+                } catch (IOException e) {
+                    logger.debug("Can't obtain label for group. Will use the default one");
+                }
+            }
+
+            if (label == null || label.isEmpty()) {
+                label = info.getName();
+            }
+            
+            if (label == null || label.isEmpty()) {
+                label = "Bose SoundTouch";
+            }
 
             // we expect only one address per device..
             if (addrs.length > 1) {
@@ -75,9 +93,15 @@ public class SoundTouchDiscoveryParticipant implements MDNSDiscoveryParticipant 
 
             properties.put(BoseSoundTouchConfiguration.HOST, addrs[0].getHostAddress());
             if (getMacAddress(info) != null) {
-                properties.put(BoseSoundTouchConfiguration.MAC_ADDRESS, new String(getMacAddress(info)));
+                properties.put(BoseSoundTouchConfiguration.MAC_ADDRESS, new String(getMacAddress(info), StandardCharsets.UTF_8));
             }
-            return DiscoveryResultBuilder.create(uid).withProperties(properties).withLabel(label).build();
+            
+            // Set manufacturer as thing property (if available)
+            byte[] manufacturer = info.getPropertyBytes("MANUFACTURER");
+            if (manufacturer != null) {
+                properties.put(Thing.PROPERTY_VENDOR, new String(manufacturer, StandardCharsets.UTF_8));
+            }
+            return DiscoveryResultBuilder.create(uid).withProperties(properties).withLabel(label).withTTL(600).build();
         }
         return result;
     }
@@ -92,7 +116,7 @@ public class SoundTouchDiscoveryParticipant implements MDNSDiscoveryParticipant 
                     logger.trace("Discovered a Bose SoundTouch thing with name '{}'", info.getName());
                     byte[] mac = getMacAddress(info);
                     if (mac != null) {
-                        return new ThingUID(typeUID, new String(mac));
+                        return new ThingUID(typeUID, new String(mac, StandardCharsets.UTF_8));
                     } else {
                         return null;
                     }
@@ -111,7 +135,11 @@ public class SoundTouchDiscoveryParticipant implements MDNSDiscoveryParticipant 
         InetAddress[] addrs = info.getInetAddresses();
         if (addrs.length > 0) {
             String ip = addrs[0].getHostAddress();
-
+            String deviceId = null;
+            byte[] mac = getMacAddress(info);
+            if (mac != null) {
+                deviceId = new String(mac, StandardCharsets.UTF_8);
+            }
             String deviceType;
             try {
                 String content = DiscoveryUtil.executeUrl("http://" + ip + ":8090/info");
@@ -121,16 +149,33 @@ public class SoundTouchDiscoveryParticipant implements MDNSDiscoveryParticipant 
             }
 
             if (deviceType.toLowerCase().contains("soundtouch 10")) {
-                return BST_10_THING_TYPE_UID;
+                // Check if it's a Stereo Pair
+                try {
+                    String group = DiscoveryUtil.executeUrl("http://" + ip + ":8090/getGroup");
+                    String masterDevice = DiscoveryUtil.getContentOfFirstElement(group, "masterDeviceId");
+
+                    if (Objects.equals(deviceId, masterDevice)) {
+                        // Stereo Pair - Master Device
+                        return BST_10_THING_TYPE_UID;
+                    } else if (!masterDevice.isEmpty()) {
+                        // Stereo Pair - Secondary Device - should not be paired
+                        return null;
+                    } else {
+                        // Single player
+                        return BST_10_THING_TYPE_UID;
+                    }
+                } catch (IOException e) {
+                    return null;
+                }
             }
             if (deviceType.toLowerCase().contains("soundtouch 20")) {
                 return BST_20_THING_TYPE_UID;
             }
-            if (deviceType.toLowerCase().contains("soundtouch 30")) {
-                return BST_30_THING_TYPE_UID;
-            }
             if (deviceType.toLowerCase().contains("soundtouch 300")) {
                 return BST_300_THING_TYPE_UID;
+            }
+            if (deviceType.toLowerCase().contains("soundtouch 30")) {
+                return BST_30_THING_TYPE_UID;
             }
             if (deviceType.toLowerCase().contains("soundtouch wireless link adapter")) {
                 return BST_WLA_THING_TYPE_UID;

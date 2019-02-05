@@ -70,30 +70,29 @@ The following XML snippet shows a thing type definition with 2 channels and one 
     <label>Sample Thing</label>
     <description>Some sample description</description>
     <channels>
-      <channel id="switch" typeId="powerSwitch" />
-      <channel id="temperature" typeId="setpointTemperature" />
+        <channel id="switch" typeId="powerSwitch" />
+        <channel id="temperature" typeId="setpointTemperature" />
     </channels>
 </thing-type>
 <channel-type id="setpointTemperature" advanced="true">
     <item-type>Number</item-type>
     <label>Setpoint Temperature</label>
     <category>Temperature</category>
-    <state min="12" max="30" step="0.5" pattern="%.1f °C" readOnly="false">
-    </state>
+    <state min="12" max="30" step="0.5" pattern="%.1f °C" readOnly="false" />
 </channel-type>
 ```
 
-In order to reuse identical channels in different bindings a channeltype can be systemwide. 
-A channel-type can be declared as systemwide by setting its `system` property to true and can then be referenced using a `system.` prefix in a `channel` `typeId` attribute in any binding - note that this should only be done in the core framework, but not by individual bindings!  
+In order to reuse identical channels in different bindings a channel type can be system-wide.
+A channel type can be declared as system-wide by setting its `system` property to true and can then be referenced using a `system.` prefix in a `channel` `typeId` attribute in any binding - note that this should only be done in the core framework, but not by individual bindings!
 
-The following XML snippet shows a system channel-type definition and thing-type definition that references it:
+The following XML snippet shows a system channel type definition and thing type definition that references it:
 
 ```xml
 <thing-type id="thingTypeID">
     <label>Sample Thing</label>
     <description>Some sample description</description>
     <channels>
-      <channel id="s" typeId="system.system-channel" />
+        <channel id="s" typeId="system.system-channel" />
     </channels>
 </thing-type>
 <channel-type id="system-channel" system="true">
@@ -103,12 +102,14 @@ The following XML snippet shows a system channel-type definition and thing-type 
 </channel-type>
 ```
 
-There exist systemwide channels that are available by default:
+### System State Channel Types
+
+There exist system-wide channel types that are available by default:
 
 | Channel Type ID      | Reference typeId            | Item Type            | Category         | Description                                                                                                                                                                                                             |
 |----------------------|-----------------------------|----------------------|------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | signal-strength      | system.signal-strength      | Number               | QualityOfService | Represents signal strength of a device as a Number with values 0, 1, 2, 3 or 4; 0 being worst strength and 4 being best strength.                                                                                       |
-| low-battery          | system.low-battery          | Switch               | Battery          | Represents a low battery warning with possible values on/off.                                                                                                                                                           |
+| low-battery          | system.low-battery          | Switch               | Battery          | Represents a low battery warning with possible values on (low battery) and off (battery ok).                                                                                                                                                           |
 | battery-level        | system.battery-level        | Number               | Battery          | Represents the battery level as a percentage (0-100%). Bindings for things supporting battery level in a different format (e.g. 4 levels) should convert to a percentage to provide a consistent battery level reading. |
 | power                | system.power                | Switch               | -                | Turn a device on/off.                                                                                                                                                                                                   |
 | brightness           | system.brightness           | Dimmer               | Light            | Brightness of a bulb (0-100%).                                                                                                                                                                                          |
@@ -143,27 +144,30 @@ The following XML snippet shows a trigger channel:
     <label>Sample Thing</label>
     <description>Some sample description</description>
     <channels>
-      <channel id="s" typeId="trigger-channel" />
+        <channel id="s" typeId="trigger-channel" />
     </channels>
 </thing-type>
 <channel-type id="trigger-channel">
     <kind>trigger</kind>
     <label>Trigger Channel</label>
     <event>
-      <options>
-        <option value="PRESSED">pressed</option>
-        <option value="RELEASED">released</option>
-        <option value="DOUBLE_PRESSED">double pressed</option>
-      </options>
+        <options>
+            <option value="PRESSED">pressed</option>
+            <option value="RELEASED">released</option>
+            <option value="DOUBLE_PRESSED">double pressed</option>
+        </options>
     </event>
 </channel-type>
 ```
 
 This channel can emit the event payloads `PRESSED`, `RELEASED` and `DOUBLE_PRESSED`.
 
-If no `<event>` tag is specified, the channel can be triggered, but has no event payload. If an empty `<event>` tag is specified, the channel can trigger any event payload.
+If no `<event>` tag is specified, the channel can be triggered, but has no event payload.
+If an empty `<event>` tag is specified, the channel can trigger any event payload.
 
-There exist systemwide trigger channels that are available by default:
+### System Trigger Channel Types
+
+There exist system-wide trigger channel types that are available by default:
 
 | Channel Type ID | Reference typeId       | Description  |
 |-----------------|------------------------|------------- |
@@ -240,6 +244,14 @@ The following XML snippet defines a list of predefined state options:
 
 The user interface can use these values to render labels for values or to provide a selection of states, when the channel is writable. 
 The option labels can also be localized.
+
+#### Dynamic State Description
+
+In situations where the static definition of a state description is not sufficient a binding may implement a `DynamicStateDescriptionProvider`.
+It allows to provide a StateDescription based on the specific `Channel`.
+Also implement this interface if you want to provide dynamic state options.
+The original `StateDescription` is available for modification and enhancement.
+The `StateDescriptionFragmentBuilder` can be used to only provide the information which is available at the time of construction.
 
 ### Channel Categories
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,7 +12,7 @@
  */
 package org.eclipse.smarthome.binding.dmx;
 
-import static org.eclipse.smarthome.binding.dmx.DmxBindingConstants.*;
+import static org.eclipse.smarthome.binding.dmx.internal.DmxBindingConstants.*;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;

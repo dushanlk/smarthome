@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,7 +21,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.smarthome.binding.mqtt.internal.MqttThingID;
 import org.eclipse.smarthome.config.core.Configuration;
 import org.eclipse.smarthome.core.thing.Bridge;
@@ -42,7 +41,7 @@ import org.mockito.MockitoAnnotations;
 import org.osgi.service.cm.ConfigurationException;
 
 /**
- * Tests cases for {@link BrokerHandler}.
+ * Test cases for {@link BrokerHandler}.
  *
  * @author David Graeff - Initial contribution
  */
@@ -59,24 +58,6 @@ public class BrokerHandlerTest {
     private MqttService service;
 
     private MqttBrokerConnectionEx connection;
-
-    /**
-     * Overwrite BrokerHandler to return our mocked/extended MqttBrokerConnection in
-     * {@link #createBrokerConnection()}.
-     */
-    public static class BrokerHandlerEx extends BrokerHandler {
-        final MqttBrokerConnectionEx e;
-
-        public BrokerHandlerEx(Bridge thing, MqttBrokerConnectionEx e) {
-            super(thing);
-            this.e = e;
-        }
-
-        @Override
-        protected @NonNull MqttBrokerConnection createBrokerConnection() throws IllegalArgumentException {
-            return e;
-        }
-    }
 
     private BrokerHandler handler;
 
@@ -126,7 +107,7 @@ public class BrokerHandlerTest {
         assertThat(initializeHandlerWaitForTimeout(), is(true));
 
         ArgumentCaptor<ThingStatusInfo> statusInfoCaptor = ArgumentCaptor.forClass(ThingStatusInfo.class);
-        verify(callback, times(2)).statusUpdated(eq(thing), statusInfoCaptor.capture());
+        verify(callback, atLeast(3)).statusUpdated(eq(thing), statusInfoCaptor.capture());
         Assert.assertThat(statusInfoCaptor.getValue().getStatus(), is(ThingStatus.ONLINE));
     }
 
@@ -153,9 +134,11 @@ public class BrokerHandlerTest {
         verify(connection, times(2)).addConnectionObserver(any());
         verify(connection, times(1)).start();
         boolean s = o.semaphore.tryAcquire(300, TimeUnit.MILLISECONDS);
-        // First we expect a CONNECTING state and then a CONNECTED state change
+        // First we expect a CONNECTING state and then a CONNECTED unique state change
         assertThat(o.counter, is(2));
-        verify(handler, times(2)).connectionStateChanged(any(), any());
+        // First we expect a CONNECTING state and then a CONNECTED state change
+        // (and other CONNECTED after the future completes)
+        verify(handler, times(3)).connectionStateChanged(any(), any());
         return s;
     }
 

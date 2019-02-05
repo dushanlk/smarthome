@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -88,6 +88,7 @@ public class MqttBrokerConnection {
     private int qos = DEFAULT_QOS;
     private boolean retain = false;
     private @Nullable MqttWillAndTestament lastWill;
+    private @Nullable Path persistencePath;
     protected @Nullable AbstractReconnectStrategy reconnectStrategy;
     private SSLContextProvider sslContextProvider = new AcceptAllCertificatesSSLContext();
     private int keepAliveInterval = DEFAULT_KEEPALIVE_INTERVAL;
@@ -182,7 +183,8 @@ public class MqttBrokerConnection {
      * @param secure A secure connection
      * @param clientId Client id. Each client on a MQTT server has a unique client id. Sometimes client ids are
      *            used for access restriction implementations.
-     *            If none is specified, a default is generated. The client id cannot be longer than 65535 characters.
+     *            If none is specified, a default is generated. The client id cannot be longer than 65535
+     *            characters.
      * @throws IllegalArgumentException If the client id or port is not valid.
      */
     public MqttBrokerConnection(String host, @Nullable Integer port, boolean secure, @Nullable String clientId) {
@@ -198,7 +200,8 @@ public class MqttBrokerConnection {
      * @param secure A secure connection
      * @param clientId Client id. Each client on a MQTT server has a unique client id. Sometimes client ids are
      *            used for access restriction implementations.
-     *            If none is specified, a default is generated. The client id cannot be longer than 65535 characters.
+     *            If none is specified, a default is generated. The client id cannot be longer than 65535
+     *            characters.
      * @throws IllegalArgumentException If the client id or port is not valid.
      */
     public MqttBrokerConnection(Protocol protocol, String host, @Nullable Integer port, boolean secure,
@@ -383,6 +386,23 @@ public class MqttBrokerConnection {
     }
 
     /**
+     * Sets the path for the persistence storage.
+     *
+     * A persistence mechanism is necessary to enable reliable messaging.
+     * For messages sent at qualities of service (QoS) 1 or 2 to be reliably delivered, messages must be stored (on both
+     * the client and server) until the delivery of the message is complete.
+     * If messages are not safely stored when being delivered then a failure in the client or server can result in lost
+     * messages.
+     * A file persistence storage is used that uses the given path. If the path does not exist it will be created on
+     * runtime (if possible). If it is set to {@code null} a implementation specific default path is used.
+     *
+     * @param persistencePath the path that should be used to store persistent data
+     */
+    public void setPersistencePath(final @Nullable Path persistencePath) {
+        this.persistencePath = persistencePath;
+    }
+
+    /**
      * Get client id to use when connecting to the broker.
      *
      * @return value clientId to use.
@@ -453,8 +473,12 @@ public class MqttBrokerConnection {
      * topic are allowed. This method will not protect you from adding a subscriber object
      * multiple times!
      *
-     * @param consumer Consumer to add
-     * @throws MqttException If connected and the subscribe fails, this exception is thrown.
+     * If there is a retained message for the topic, you are guaranteed to receive a callback
+     * for each new subscriber, even for the same topic.
+     *
+     * @param topic The topic to subscribe to.
+     * @param subscriber The callback listener for received messages for the given topic.
+     * @return Completes with true if successful. Completes with false if not connected yet. Exceptionally otherwise.
      */
     public CompletableFuture<Boolean> subscribe(String topic, MqttMessageSubscriber subscriber) {
         CompletableFuture<Boolean> future = new CompletableFuture<Boolean>();
@@ -463,13 +487,20 @@ public class MqttBrokerConnection {
             subscribers.put(topic, subscriberList);
             subscriberList.add(subscriber);
         }
-        MqttAsyncClient client = this.client;
-        if (client != null && client.isConnected()) {
+        final MqttAsyncClient client = this.client;
+        if (client == null) {
+            future.completeExceptionally(new Exception("No MQTT client"));
+            return future;
+        }
+        if (client.isConnected()) {
             try {
                 client.subscribe(topic, qos, future, actionCallback);
             } catch (org.eclipse.paho.client.mqttv3.MqttException e) {
                 future.completeExceptionally(e);
             }
+        } else {
+            // The subscription will be performed on connecting.
+            future.complete(false);
         }
         return future;
     }
@@ -477,6 +508,8 @@ public class MqttBrokerConnection {
     /**
      * Subscribes to a topic on the given connection, but does not alter the subscriber list.
      *
+     * @param topic The topic to subscribe to.
+     * @return Completes with true if successful. Exceptionally otherwise.
      */
     protected CompletableFuture<Boolean> subscribeRaw(String topic) {
         logger.trace("subscribeRaw message consumer for topic '{}' from broker '{}'", topic, host);
@@ -497,8 +530,11 @@ public class MqttBrokerConnection {
 
     /**
      * Remove a previously registered consumer from this connection.
+     * If no more consumers are registered for a topic, the topic will be unsubscribed from.
      *
-     * @param subscriber to remove.
+     * @param topic The topic to unsubscribe from.
+     * @param subscriber The callback listener to remove.
+     * @return Completes with true if successful. Exceptionally otherwise.
      */
     @SuppressWarnings({ "null", "unused" })
     public CompletableFuture<Boolean> unsubscribe(String topic, MqttMessageSubscriber subscriber) {
@@ -525,11 +561,12 @@ public class MqttBrokerConnection {
     }
 
     /**
-     * Unsubscribes a topic on the given connection, but does not alter the subscriber list.
+     * Unsubscribes from a topic on the given connection, but does not alter the subscriber list.
      *
      * @param client The client connection
      * @param topic The topic to unsubscribe from
-     * @return Completes with true if successful. Exceptionally otherwise.
+     * @return Completes with true if successful. Completes with false if no broker connection is established.
+     *         Exceptionally otherwise.
      */
     protected CompletableFuture<Boolean> unsubscribeRaw(MqttAsyncClient client, String topic) {
         logger.trace("Unsubscribing message consumer for topic '{}' from broker '{}'", topic, host);
@@ -610,7 +647,6 @@ public class MqttBrokerConnection {
         // We don't want multiple concurrent threads to start a connection
         synchronized (this) {
             if (connectionState() != MqttConnectionState.DISCONNECTED) {
-                logger.debug("Connection already running");
                 return CompletableFuture.completedFuture(true);
             }
 
@@ -652,14 +688,17 @@ public class MqttBrokerConnection {
         serverURI.append(port);
 
         // Storage
-        Path tmpDir = Paths.get(ConfigConstants.getUserDataFolder());
+        Path persistencePath = this.persistencePath;
+        if (persistencePath == null) {
+            persistencePath = Paths.get(ConfigConstants.getUserDataFolder()).resolve("mqtt").resolve(host);
+        }
         try {
-            tmpDir = Files.createDirectories(tmpDir.resolve("mqtt").resolve(host));
+            persistencePath = Files.createDirectories(persistencePath);
         } catch (IOException e) {
             future.completeExceptionally(new MqttException(e));
             return future;
         }
-        MqttDefaultFilePersistence _dataStore = new MqttDefaultFilePersistence(tmpDir.toString());
+        MqttDefaultFilePersistence _dataStore = new MqttDefaultFilePersistence(persistencePath.toString());
 
         // Create the client
         MqttAsyncClient _client;
@@ -679,7 +718,7 @@ public class MqttBrokerConnection {
         try {
             _client.connect(createMqttOptions(), null, connectionCallback);
             logger.info("Starting MQTT broker connection to '{}' with clientid {} and file store '{}'", host,
-                    getClientId(), tmpDir);
+                    getClientId(), persistencePath);
         } catch (org.eclipse.paho.client.mqttv3.MqttException | ConfigurationException e) {
             future.completeExceptionally(new MqttException(e));
             return future;
@@ -788,7 +827,11 @@ public class MqttBrokerConnection {
             // We need to thread change here. Because paho does not allow to disconnect within a callback method
             unsubscribeAll().thenRunAsync(() -> {
                 try {
-                    client.disconnect(100, future, actionCallback);
+                    client.disconnect(100).waitForCompletion(100);
+                    if (client.isConnected()) {
+                        client.disconnectForcibly();
+                    }
+                    future.complete(true);
                 } catch (org.eclipse.paho.client.mqttv3.MqttException e) {
                     logger.debug("Error while closing connection to broker", e);
                     future.complete(false);

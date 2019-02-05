@@ -17,7 +17,7 @@ In general tests are implemented in a separate fragment bundle, which host is th
     Bundle-ManifestVersion: 2
     Bundle-Name: Tests for the Eclipse SmartHome Core
     Bundle-SymbolicName: org.eclipse.smarthome.core.test
-    Bundle-Version: 0.10.0.qualifier
+    Bundle-Version: 0.11.0.qualifier
     Bundle-Vendor: Eclipse.org/SmartHome
     Fragment-Host: org.eclipse.smarthome.core
     Bundle-RequiredExecutionEnvironment: JavaSE-1.8
@@ -138,6 +138,12 @@ public class MyBindingHandlerTest {
         handler = new MyBindingHandler(thing);
         handler.setCallback(callback);
     }
+    
+    @After
+    public void tearDown() {
+        // Free any resources, like open database connections, files etc.
+        handler.dispose();
+    }
 
     @Test
     public void initializeShouldCallTheCallback() {
@@ -145,15 +151,9 @@ public class MyBindingHandlerTest {
         // pass it the thing and a ThingStatusInfo object containing the ThingStatus of the thing.
         handler.initialize();
 
-        // the argument captor will capture the argument of type ThingStatusInfo given to the
-        // callback#statusUpdated method.
-        ArgumentCaptor<ThingStatusInfo> statusInfoCaptor = ArgumentCaptor.forClass(ThingStatusInfo.class);
-
-        // verify the interaction with the callback and capture the ThingStatusInfo argument:
-        verify(callback).statusUpdated(eq(thing), statusInfoCaptor.capture());
-        // assert that the ThingStatusInfo given to the callback was build with the ONLINE status:
-        ThingStatusInfo thingStatusInfo = statusInfoCaptor.getValue();
-        Assert.assertThat(thingStatusInfo.getStatus(), is(equalTo(ThingStatus.ONLINE)));
+        // verify the interaction with the callback.
+        // Check that the ThingStatusInfo given as second parameter to the callback was build with the ONLINE status:
+        verify(callback).statusUpdated(eq(thing), argThat(arg -> arg.getStatus().equals(ThingStatus.ONLINE)));
     }
 
 }

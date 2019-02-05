@@ -22,7 +22,7 @@ angular.module('PaperUI.services', [ 'PaperUI.services.repositories', 'PaperUI.c
     });
 }).factory('eventService', function($resource, $log, restConfig) {
 
-    var callbacks = [];
+    var listeners = [];
     var eventSrc;
 
     var initializeEventService = function() {
@@ -39,10 +39,10 @@ angular.module('PaperUI.services', [ 'PaperUI.services.repositories', 'PaperUI.c
         eventSrc.addEventListener('message', function(event) {
             var data = JSON.parse(event.data);
             $log.debug('Event received: ' + data.topic + ' - ' + data.payload);
-            angular.forEach(callbacks, function(element) {
-                var match = data.topic.match(element.topic);
+            angular.forEach(listeners, function(listener) {
+                var match = data.topic.match(listener.topic);
                 if (match != null && match == data.topic) {
-                    element.callback(data.topic, JSON.parse(data.payload));
+                    listener.callback(data.topic, JSON.parse(data.payload));
                 }
             });
         });
@@ -54,10 +54,18 @@ angular.module('PaperUI.services', [ 'PaperUI.services.repositories', 'PaperUI.c
     return new function() {
         this.onEvent = function(topic, callback) {
             var topicRegex = topic.replace('/', '\/').replace('*', '.*');
-            callbacks.push({
+            listeners.push({
                 topic : topicRegex,
                 callback : callback
             });
+        }
+
+        this.removeListener = function(topic) {
+            for ( var i in listeners) {
+                if (listeners[i]['topic'] === topic) {
+                    listeners.splice(i, 1);
+                }
+            }
         }
     };
 }).factory('toastService', function($mdToast, $rootScope) {
@@ -90,7 +98,7 @@ angular.module('PaperUI.services', [ 'PaperUI.services.repositories', 'PaperUI.c
     };
 }).factory('configService', function(itemService, thingRepository, ruleRepository, $filter, itemRepository) {
 
-    var insertEmptyOption = function(parameter) {
+    function insertEmptyOption(parameter) {
         if (!parameter.required && ((parameter.options && parameter.options.length > 0) || parameter.context)) {
             parameter.options.splice(0, 0, {
                 label : '',
@@ -99,7 +107,7 @@ angular.module('PaperUI.services', [ 'PaperUI.services.repositories', 'PaperUI.c
         }
     }
 
-    var applyParameterContext = function(parameter) {
+    function applyParameterContext(parameter) {
         if (!parameter.context) {
             return false;
         }
@@ -158,25 +166,33 @@ angular.module('PaperUI.services', [ 'PaperUI.services.repositories', 'PaperUI.c
                 return false;
         }
 
-        if (context === "ITEM") {
-            getItemOptions(parameter);
-        }
-
-        if (context === "RULE") {
-            parameter.options = parameter.options ? parameter.options : [];
-            ruleRepository.getAll(function(rules) {
-                angular.forEach(rules, function(rule) {
-                    rule.value = rule.uid;
-                    rule.label = rule.name;
-                    parameter.options.push(rule);
-                });
-            });
+        switch (context) {
+            case "ITEM":
+                getItemOptions(parameter).then(setMissingLabels);
+                break;
+            case "THING":
+                getThingOptions(parameter).then(setMissingLabels);
+                break;
+            case "CHANNEL":
+                getChannelOptions(parameter).then(setMissingLabels);
+                break;
+            case "RULE":
+                getRuleOptions(parameter);
+                break;
         }
 
         return true;
     }
 
-    var applyParameterType = function(parameter) {
+    function setMissingLabels(parameter) {
+        angular.forEach(parameter.options, function(option) {
+            if (!option.label || option.label.length == 0) {
+                option.label = option.value;
+            }
+        });
+    }
+
+    function applyParameterType(parameter) {
         var type = parameter.type ? parameter.type.toUpperCase() : "TEXT";
         switch (type) {
             case 'TEXT':
@@ -220,7 +236,7 @@ angular.module('PaperUI.services', [ 'PaperUI.services.repositories', 'PaperUI.c
         }
     }
 
-    var adjustNumberValue = function(parameter, parseNumberFunction) {
+    function adjustNumberValue(parameter, parseNumberFunction) {
         angular.forEach(parameter.options, function(option) {
             option.value = parseNumberFunction(option.value);
         })
@@ -229,55 +245,103 @@ angular.module('PaperUI.services', [ 'PaperUI.services.repositories', 'PaperUI.c
         }
     }
 
-    var getChannelsConfig = function(configParams) {
-        var self = this, hasOneItem;
-        var configParameters = configParams;
-        for (var i = 0; !hasOneItem && i < configParameters.length; i++) {
-            var parameterItems = $.grep(configParameters[i].parameters, function(value) {
-                return value.context && (value.context.toUpperCase() == "THING" || value.context.toUpperCase() == "CHANNEL");
-            });
-            if (parameterItems.length > 0) {
-                hasOneItem = true;
-            }
-            if (hasOneItem) {
-                thingRepository.getAll(function(things) {
-                    for (var g_i = 0; g_i < configParameters.length; g_i++) {
-                        for (var i = 0; i < configParameters[g_i].parameters.length; i++) {
-                            if (configParameters[g_i].parameters[i].context) {
-                                if (configParameters[g_i].parameters[i].context.toUpperCase() === "THING") {
-                                    configParameters[g_i].parameters[i].options = filterByAttributes(things, configParameters[g_i].parameters[i].filterCriteria);
-                                } else if (configParameters[g_i].parameters[i].context.toUpperCase() === "CHANNEL") {
-                                    configParameters[g_i].parameters[i].options = getChannelsFromThings(things, configParameters[g_i].parameters[i].filterCriteria);
-                                }
-                            }
-                        }
-                    }
-                });
-            }
-            function getChannelsFromThings(arr, filter) {
-                var channels = [];
-                for (var i = 0; i < arr.length; i++) {
-                    var filteredChannels = filterByAttributes(arr[i].channels, filter);
-                    for (var j = 0; j < filteredChannels.length; j++) {
-                        filteredChannels[j].label = arr[i].label;
-                        filteredChannels[j].value = filteredChannels[j].uid;
-                    }
-                    channels = channels.concat(filteredChannels);
-                }
-                return channels;
-            }
-        }
-        return configParameters;
+    function getChannelsFromThings(things, filter) {
+        var channels = [];
+        angular.forEach(things, function(thing) {
+            var filteredChannels = filterByAttributes(thing.channels, filter);
+            angular.forEach(filteredChannels, function(channel) {
+                channel.label = thing.label;
+                channel.value = channel.uid;
+
+                channels.push(channel);
+            })
+        });
+
+        return channels;
     }
 
-    var getItemOptions = function(parameter) {
-        return itemRepository.getAll().then(function(items) {
-            var filteredItems = filterByAttributes(items, parameter.filterCriteria);
-            parameter.options = $filter('orderBy')(filteredItems, 'label');
+    function lookupOptionLabels(options, entities, valueName, labelName) {
+        angular.forEach(options, function(option) {
+            if (!option.label || option.label.length == 0) {
+                // find corresponding entity for this option
+                optionEntities = entities.filter(function(entity) {
+                    return entity[valueName] === option.value;
+                });
+                if (optionEntities && optionEntities.length > 0) {
+                    option.label = optionEntities[0][labelName]; // set the option label to the entity label
+                } else {
+                    option.label = option.value; // fallback to option value
+                }
+            }
         });
     }
 
-    var filterByAttributes = function(arr, filters) {
+    function getItemOptions(parameter) {
+        return itemRepository.getAll().then(function(items) {
+            var filteredItems = filterByAttributes(items, parameter.filterCriteria);
+            if (parameter.options && parameter.options.length > 0) {
+                lookupOptionLabels(parameter.options, filteredItems, 'name', 'label')
+            } else {
+                parameter.options = $filter('orderBy')(filteredItems, 'label');
+            }
+            angular.forEach(parameter.options, function(option) {
+                if (!option.value && option.name) {
+                    option.value = option.name;
+                }
+            });
+
+            return parameter;
+        });
+    }
+
+    function getThingOptions(parameter) {
+        return thingRepository.getAll().then(function(things) {
+            var filteredThings = filterByAttributes(things, parameter.filterCriteria);
+            if (parameter.options && parameter.options.length > 0) {
+                lookupOptionLabels(parameter.options, filteredThings, 'UID', 'label')
+            } else {
+                parameter.options = filteredThings;
+            }
+            angular.forEach(parameter.options, function(option) {
+                if (!option.value && option.UID) {
+                    option.value = option.UID;
+                }
+            });
+
+            return parameter;
+        });
+    }
+
+    function getChannelOptions(parameter) {
+        return thingRepository.getAll().then(function(things) {
+            var filteredChannels = getChannelsFromThings(things, parameter.filterCriteria);
+            if (parameter.options && parameter.options.length > 0) {
+                lookupOptionLabels(parameter.options, filteredChannels, 'id', 'label')
+            } else {
+                parameter.options = filteredChannels;
+            }
+            angular.forEach(parameter.options, function(option) {
+                if (!option.value && option.id) {
+                    option.value = option.id;
+                }
+            });
+
+            return parameter;
+        });
+    }
+
+    function getRuleOptions(parameter) {
+        parameter.options = parameter.options ? parameter.options : [];
+        ruleRepository.getAll(function(rules) {
+            angular.forEach(rules, function(rule) {
+                rule.label = rule.name;
+                rule.value = rule.uid;
+                parameter.options.push(rule);
+            });
+        });
+    }
+
+    function filterByAttributes(arr, filters) {
         if (!filters || filters.length == 0) {
             return arr;
         }
@@ -301,7 +365,7 @@ angular.module('PaperUI.services', [ 'PaperUI.services.repositories', 'PaperUI.c
         });
     }
 
-    var getParameter = function(paramGroups, itemName) {
+    function getParameter(paramGroups, itemName) {
         for (var i = 0; i < paramGroups.length; i++) {
             for (var j = 0; paramGroups[i].parameters && j < paramGroups[i].parameters.length; j++) {
                 if (paramGroups[i].parameters[j].name == itemName) {
@@ -340,7 +404,7 @@ angular.module('PaperUI.services', [ 'PaperUI.services.repositories', 'PaperUI.c
                     applyParameterType(parameter);
                 }
 
-                var group = $filter('filter')(configGroups, function(configGroup) {
+                var group = configGroups.filter(function(configGroup) {
                     // default the group name if the parameter group name is unknown.
                     var groupName = groupNameIndexMap[parameter.groupName] >= 0 ? parameter.groupName : '_default';
                     return configGroup.name === groupName;
@@ -375,7 +439,7 @@ angular.module('PaperUI.services', [ 'PaperUI.services.repositories', 'PaperUI.c
                 }
                 renderingGroups.push(group);
             });
-            return getChannelsConfig(renderingGroups);
+            return renderingGroups;
         },
 
         getConfigAsArray : function(config, paramGroups) {

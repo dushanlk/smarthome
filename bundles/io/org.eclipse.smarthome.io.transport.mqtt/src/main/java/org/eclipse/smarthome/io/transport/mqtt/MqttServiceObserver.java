@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -27,7 +27,7 @@ public interface MqttServiceObserver {
      * If a broker connection is replaced, you will be notified by a brokerRemoved call,
      * followed by a brokerAdded call.
      *
-     * @param The unique ID withing {@link MqttService}
+     * @param The unique ID within {@link MqttService}
      * @param broker The new broker connection
      */
     void brokerAdded(String brokerID, MqttBrokerConnection broker);
@@ -35,7 +35,7 @@ public interface MqttServiceObserver {
     /**
      * Called, if a broker has been removed from the {@see MqttService}.
      *
-     * @param The unique ID withing {@link MqttService}
+     * @param The unique ID within {@link MqttService}
      * @param broker The removed broker connection.
      *            Please unsubscribe from all topics and unregister
      *            all your listeners.

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -35,6 +35,7 @@ import org.osgi.service.component.annotations.Reference;
 public class BoseSoundTouchHandlerFactory extends BaseThingHandlerFactory {
 
     private StorageService storageService;
+    private BoseStateDescriptionOptionProvider stateOptionProvider;
 
     @Override
     public boolean supportsThingType(ThingTypeUID thingTypeUID) {
@@ -45,7 +46,8 @@ public class BoseSoundTouchHandlerFactory extends BaseThingHandlerFactory {
     protected ThingHandler createHandler(Thing thing) {
         Storage<ContentItem> storage = storageService.getStorage(thing.getUID().toString(),
                 ContentItem.class.getClassLoader());
-        BoseSoundTouchHandler handler = new BoseSoundTouchHandler(thing, new PresetContainer(storage));
+        BoseSoundTouchHandler handler = new BoseSoundTouchHandler(thing, new PresetContainer(storage),
+                stateOptionProvider);
         return handler;
     }
 
@@ -58,4 +60,12 @@ public class BoseSoundTouchHandlerFactory extends BaseThingHandlerFactory {
         this.storageService = null;
     }
 
+    @Reference
+    protected void setPresetChannelTypeProvider(BoseStateDescriptionOptionProvider stateOptionProvider) {
+        this.stateOptionProvider = stateOptionProvider;
+    }
+
+    protected void unsetPresetChannelTypeProvider(BoseStateDescriptionOptionProvider stateOptionProvider) {
+        this.stateOptionProvider = null;
+    }
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,8 +12,7 @@
  */
 package org.eclipse.smarthome.binding.homematic.internal.communicator.client;
 
-import static org.eclipse.smarthome.binding.homematic.HomematicBindingConstants.INSTALL_MODE_NORMAL;
-import static org.eclipse.smarthome.binding.homematic.HomematicBindingConstants.CONFIGURATION_CHANNEL_NUMBER;
+import static org.eclipse.smarthome.binding.homematic.HomematicBindingConstants.*;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -22,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.lang.StringUtils;
+import org.eclipse.smarthome.binding.homematic.HomematicBindingConstants;
 import org.eclipse.smarthome.binding.homematic.internal.common.HomematicConfig;
 import org.eclipse.smarthome.binding.homematic.internal.communicator.message.RpcRequest;
 import org.eclipse.smarthome.binding.homematic.internal.communicator.parser.GetAllScriptsParser;
@@ -219,12 +219,7 @@ public abstract class RpcClient<T> {
      */
     private void setChannelDatapointValues(HmChannel channel) throws IOException {
         for (HmDatapoint dp : channel.getDatapoints()) {
-            if (dp.isReadable() && !dp.isVirtual() && dp.getParamsetType() == HmParamsetType.VALUES) {
-                RpcRequest<T> request = createRpcRequest("getValue");
-                request.addArg(getRpcAddress(channel.getDevice().getAddress()) + getChannelSuffix(channel));
-                request.addArg(dp.getName());
-                new GetValueParser(dp).parse(sendMessage(config.getRpcPort(channel), request));
-            }
+            getDatapointValue(dp);
         }
     }
 
@@ -232,10 +227,23 @@ public abstract class RpcClient<T> {
      * Tries to identify the gateway and returns the GatewayInfo.
      */
     public HmGatewayInfo getGatewayInfo(String id) throws IOException {
-        GetDeviceDescriptionParser ddParser = getDeviceDescription(HmInterface.RF);
-        boolean isHomegear = StringUtils.equalsIgnoreCase(ddParser.getType(), "Homegear");
+        boolean isHomegear = false;
+        GetDeviceDescriptionParser ddParser;
+        ListBidcosInterfacesParser biParser;
 
-        ListBidcosInterfacesParser biParser = listBidcosInterfaces(HmInterface.RF);
+        try {
+            ddParser = getDeviceDescription(HmInterface.RF);
+            isHomegear = StringUtils.equalsIgnoreCase(ddParser.getType(), "Homegear");
+        } catch (IOException ex) {
+            // can't load gateway infos via RF interface
+            ddParser = new GetDeviceDescriptionParser();
+        }
+
+        try {
+            biParser = listBidcosInterfaces(HmInterface.RF);
+        } catch (IOException ex) {
+            biParser = listBidcosInterfaces(HmInterface.HMIP);
+        }
 
         HmGatewayInfo gatewayInfo = new HmGatewayInfo();
         gatewayInfo.setAddress(biParser.getGatewayAddress());
@@ -244,16 +252,21 @@ public abstract class RpcClient<T> {
             gatewayInfo.setType(ddParser.getType());
             gatewayInfo.setFirmware(ddParser.getFirmware());
         } else if ((StringUtils.startsWithIgnoreCase(biParser.getType(), "CCU")
+                || StringUtils.startsWithIgnoreCase(biParser.getType(), "HMIP_CCU")
                 || StringUtils.startsWithIgnoreCase(ddParser.getType(), "HM-RCV-50") || config.isCCUType())
                 && !config.isNoCCUType()) {
             gatewayInfo.setId(HmGatewayInfo.ID_CCU);
             String type = StringUtils.isBlank(biParser.getType()) ? "CCU" : biParser.getType();
             gatewayInfo.setType(type);
-            gatewayInfo.setFirmware(ddParser.getFirmware());
+            gatewayInfo.setFirmware(ddParser.getFirmware() != null ? ddParser.getFirmware() : biParser.getFirmware());
         } else {
             gatewayInfo.setId(HmGatewayInfo.ID_DEFAULT);
             gatewayInfo.setType(biParser.getType());
             gatewayInfo.setFirmware(biParser.getFirmware());
+        }
+
+        if (gatewayInfo.isCCU() || config.hasRfPort()) {
+            gatewayInfo.setRfInterface(hasInterface(HmInterface.RF, id));
         }
 
         if (gatewayInfo.isCCU() || config.hasWiredPort()) {
@@ -289,9 +302,16 @@ public abstract class RpcClient<T> {
     }
 
     /**
-     * Sets the value of the datapoint.
+     * Sets the value of the datapoint using the provided rx transmission mode.
+     *
+     * @param dp The datapoint to set
+     * @param value The new value to set on the datapoint
+     * @param rxMode The rx mode to use for the transmission of the datapoint value
+     *            ({@link HomematicBindingConstants#RX_BURST_MODE "BURST"} for burst mode,
+     *            {@link HomematicBindingConstants#RX_WAKEUP_MODE "WAKEUP"} for wakeup mode, or null for the default
+     *            mode)
      */
-    public void setDatapointValue(HmDatapoint dp, Object value) throws IOException {
+    public void setDatapointValue(HmDatapoint dp, Object value, String rxMode) throws IOException {
         if (dp.isIntegerType() && value instanceof Double) {
             value = ((Number) value).intValue();
         }
@@ -302,6 +322,7 @@ public abstract class RpcClient<T> {
             request.addArg(getRpcAddress(dp.getChannel().getDevice().getAddress()) + getChannelSuffix(dp.getChannel()));
             request.addArg(dp.getName());
             request.addArg(value);
+            configureRxMode(request, rxMode);
         } else {
             request = createRpcRequest("putParamset");
             request.addArg(getRpcAddress(dp.getChannel().getDevice().getAddress()) + getChannelSuffix(dp.getChannel()));
@@ -309,8 +330,32 @@ public abstract class RpcClient<T> {
             Map<String, Object> paramSet = new HashMap<String, Object>();
             paramSet.put(dp.getName(), value);
             request.addArg(paramSet);
+            configureRxMode(request, rxMode);
         }
         sendMessage(config.getRpcPort(dp.getChannel()), request);
+    }
+
+    protected void configureRxMode(RpcRequest<T> request, String rxMode) {
+        if (rxMode != null) {
+            if (RX_BURST_MODE.equals(rxMode) || RX_WAKEUP_MODE.equals(rxMode)) {
+                request.addArg(rxMode);
+            }
+        }
+    }
+
+    /**
+     * Retrieves the value of a single {@link HmDatapoint} from the device. Can only be used for the paramset "VALUES".
+     *
+     * @param dp The HmDatapoint that shall be loaded
+     * @throws IOException If there is a problem while communicating to the gateway
+     */
+    public void getDatapointValue(HmDatapoint dp) throws IOException {
+        if (dp.isReadable() && !dp.isVirtual() && dp.getParamsetType() == HmParamsetType.VALUES) {
+            RpcRequest<T> request = createRpcRequest("getValue");
+            request.addArg(getRpcAddress(dp.getChannel().getDevice().getAddress()) + getChannelSuffix(dp.getChannel()));
+            request.addArg(dp.getName());
+            new GetValueParser(dp).parse(sendMessage(config.getRpcPort(dp.getChannel()), request));
+        }
     }
 
     /**
@@ -334,7 +379,7 @@ public abstract class RpcClient<T> {
 
     /**
      * Enables/disables the install mode for given seconds.
-     * 
+     *
      * @param hmInterface specifies the interface to enable / disable install mode on
      * @param enable if <i>true</i> it will be enabled, otherwise disabled
      * @param seconds desired duration of install mode
@@ -348,10 +393,10 @@ public abstract class RpcClient<T> {
         logger.debug("Submitting setInstallMode(on={}, time={}, mode={}) ", enable, seconds, INSTALL_MODE_NORMAL);
         sendMessage(config.getRpcPort(hmInterface), request);
     }
-    
+
     /**
      * Returns the remaining time of <i>install_mode==true</i>
-     * 
+     *
      * @param hmInterface specifies the interface on which install mode status is requested
      * @return current duration in seconds that the controller will remain in install mode,
      *         value of 0 means that the install mode is disabled
@@ -361,12 +406,15 @@ public abstract class RpcClient<T> {
         RpcRequest<T> request = createRpcRequest("getInstallMode");
         Object[] result = sendMessage(config.getRpcPort(hmInterface), request);
         if (logger.isTraceEnabled()) {
-            logger.trace("Checking InstallMode: getInstallMode() request returned {} (remaining seconds in InstallMode=true)", result);
+            logger.trace(
+                    "Checking InstallMode: getInstallMode() request returned {} (remaining seconds in InstallMode=true)",
+                    result);
         }
         try {
             return (int) result[0];
         } catch (Exception cause) {
-            IOException wrappedException = new IOException("Failed to request install mode from interface " + hmInterface);
+            IOException wrappedException = new IOException(
+                    "Failed to request install mode from interface " + hmInterface);
             wrappedException.initCause(cause);
             throw wrappedException;
         }

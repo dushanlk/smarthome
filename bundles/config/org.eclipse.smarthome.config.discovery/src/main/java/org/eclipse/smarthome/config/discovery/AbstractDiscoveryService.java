@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,6 +16,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
@@ -93,7 +94,7 @@ public abstract class AbstractDiscoveryService implements DiscoveryService {
         if (supportedThingTypes == null) {
             this.supportedThingTypes = Collections.emptySet();
         } else {
-            this.supportedThingTypes = supportedThingTypes;
+            this.supportedThingTypes = Collections.unmodifiableSet(new HashSet<>(supportedThingTypes));
         }
 
         if (timeout < 0) {
@@ -106,11 +107,12 @@ public abstract class AbstractDiscoveryService implements DiscoveryService {
     }
 
     /**
-     * Creates a new instance of this class with the specified parameters.
+     * Creates a new instance of this class with the specified parameters and background discovery enabled.
      *
      * @param supportedThingTypes the list of Thing types which are supported (can be null)
      * @param timeout the discovery timeout in seconds after which the discovery service
      *            automatically stops its forced discovery process (>= 0).
+     *            If set to 0, disables the automatic stop.
      * @throws IllegalArgumentException if the timeout < 0
      */
     public AbstractDiscoveryService(@Nullable Set<ThingTypeUID> supportedThingTypes, int timeout)
@@ -119,10 +121,11 @@ public abstract class AbstractDiscoveryService implements DiscoveryService {
     }
 
     /**
-     * Creates a new instance of this class with the specified parameters.
+     * Creates a new instance of this class with the specified parameters and background discovery enabled.
      *
      * @param timeout the discovery timeout in seconds after which the discovery service
      *            automatically stops its forced discovery process (>= 0).
+     *            If set to 0, disables the automatic stop.
      * @throws IllegalArgumentException if the timeout < 0
      */
     public AbstractDiscoveryService(int timeout) throws IllegalArgumentException {

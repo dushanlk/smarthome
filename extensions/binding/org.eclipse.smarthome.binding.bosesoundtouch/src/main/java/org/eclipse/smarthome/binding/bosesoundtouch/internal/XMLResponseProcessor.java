@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -66,17 +66,22 @@ public class XMLResponseProcessor {
         msgBodyMap.put("bass", XMLHandlerState.Bass);
         msgBodyMap.put("sources", XMLHandlerState.Sources);
         msgBodyMap.put("bassCapabilities", XMLHandlerState.BassCapabilities);
+        msgBodyMap.put("group", XMLHandlerState.Group);
 
         // info message states
         Map<String, XMLHandlerState> infoMap = new HashMap<>();
         stateSwitchingMap.put(XMLHandlerState.Info, infoMap);
-        infoMap.put("components", XMLHandlerState.Unprocessed); // TODO read software version and serial number
+        infoMap.put("components", XMLHandlerState.Info);
+        infoMap.put("component", XMLHandlerState.Info);
         infoMap.put("name", XMLHandlerState.InfoName);
         infoMap.put("type", XMLHandlerState.InfoType);
+        infoMap.put("componentCategory", XMLHandlerState.Unprocessed);
+        infoMap.put("softwareVersion", XMLHandlerState.InfoFirmwareVersion);
+        infoMap.put("serialNumber", XMLHandlerState.Unprocessed);
         infoMap.put("networkInfo", XMLHandlerState.Unprocessed);
         infoMap.put("margeAccountUUID", XMLHandlerState.Unprocessed);
         infoMap.put("margeURL", XMLHandlerState.Unprocessed);
-        infoMap.put("moduleType", XMLHandlerState.Unprocessed);
+        infoMap.put("moduleType", XMLHandlerState.InfoModuleType);
         infoMap.put("variant", XMLHandlerState.Unprocessed);
         infoMap.put("variantMode", XMLHandlerState.Unprocessed);
         infoMap.put("countryCode", XMLHandlerState.Unprocessed);
@@ -94,6 +99,8 @@ public class XMLResponseProcessor {
         updatesMap.put("volumeUpdated", XMLHandlerState.MsgBody);
         updatesMap.put("zoneUpdated", XMLHandlerState.ZoneUpdated); // just notifies but dosn't provide details
         updatesMap.put("bassUpdated", XMLHandlerState.BassUpdated);
+        updatesMap.put("presetsUpdated", XMLHandlerState.MsgBody);
+        updatesMap.put("groupUpdated", XMLHandlerState.MsgBody);
 
         Map<String, XMLHandlerState> volume = new HashMap<>();
         stateSwitchingMap.put(XMLHandlerState.Volume, volume);
@@ -125,7 +132,7 @@ public class XMLResponseProcessor {
         Map<String, XMLHandlerState> contentItemMap = new HashMap<>();
         stateSwitchingMap.put(XMLHandlerState.ContentItem, contentItemMap);
         contentItemMap.put("itemName", XMLHandlerState.ContentItemItemName);
-        contentItemMap.put("containerArt", XMLHandlerState.Unprocessed);
+        contentItemMap.put("containerArt", XMLHandlerState.ContentItemContainerArt);
 
         Map<String, XMLHandlerState> presetMap = new HashMap<>();
         stateSwitchingMap.put(XMLHandlerState.Preset, presetMap);
@@ -149,6 +156,18 @@ public class XMLResponseProcessor {
         bassCapabilitiesMap.put("bassMin", XMLHandlerState.BassMin);
         bassCapabilitiesMap.put("bassMax", XMLHandlerState.BassMax);
         bassCapabilitiesMap.put("bassDefault", XMLHandlerState.BassDefault);
+        
+        Map<String, XMLHandlerState> groupsMap = new HashMap<>();
+        stateSwitchingMap.put(XMLHandlerState.Group, groupsMap);
+        groupsMap.put("name", XMLHandlerState.GroupName);
+        groupsMap.put("masterDeviceId", XMLHandlerState.MasterDeviceId);
+        groupsMap.put("roles", XMLHandlerState.Unprocessed);
+        groupsMap.put("senderIPAddress", XMLHandlerState.Unprocessed);
+        groupsMap.put("status", XMLHandlerState.Unprocessed);
+        groupsMap.put("roles", XMLHandlerState.Unprocessed);
+        groupsMap.put("groupRole", XMLHandlerState.Unprocessed);
+        groupsMap.put("deviceId", XMLHandlerState.DeviceId);
+        groupsMap.put("role", XMLHandlerState.Unprocessed);
+        groupsMap.put("ipAddress", XMLHandlerState.DeviceIp);
     }
-
 }

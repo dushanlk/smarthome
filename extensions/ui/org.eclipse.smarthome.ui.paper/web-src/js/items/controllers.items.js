@@ -217,7 +217,8 @@ angular.module('PaperUI.items')//
             if (splitValue.length > 1) {
                 $scope.item['function'].params = [ splitValue[1], splitValue[2] ];
             }
-
+        } else {
+            delete $scope.item.groupType;
         }
         if ($scope.item['function'] && !$scope.item['function'].name) {
             $scope.item['function'] = null;
@@ -233,29 +234,32 @@ angular.module('PaperUI.items')//
     function updateMetadata(itemName, metadata, originalItem, toastText) {
         return $q(function(resolve, reject) {
             var resolveLater = false;
+            var namespaceUpdatePromisses = [];
             if (!originalItem.metadata || JSON.stringify(metadata) !== JSON.stringify(originalItem.metadata)) {
                 for ( var namespace in metadata) {
-                    if (!metadata.hasOwnProperty(namespace)) {
+                    if (!metadata.hasOwnProperty(namespace) || metadata[namespace].value === undefined || metadata[namespace].value.length === 0) {
                         continue;
                     }
 
                     if (!originalItem.metadata || JSON.stringify(metadata[namespace]) !== JSON.stringify(originalItem.metadata[namespace])) {
                         resolveLater = true;
-                        itemService.updateMetadata({
+                        var namespaceUpdatePromise = itemService.updateMetadata({
                             itemName : itemName,
                             namespace : namespace
-                        }, metadata[namespace], function() {
+                        }, metadata[namespace]).$promise.then(function() {
                             if (toastText) {
                                 toastService.showDefaultToast(toastText);
                             }
-
-                            resolve();
                         });
+
+                        namespaceUpdatePromisses.push(namespaceUpdatePromise);
                     }
                 }
             }
             if (!resolveLater) {
                 resolve();
+            } else {
+                $q.all(namespaceUpdatePromisses).then(resolve());
             }
         });
     }

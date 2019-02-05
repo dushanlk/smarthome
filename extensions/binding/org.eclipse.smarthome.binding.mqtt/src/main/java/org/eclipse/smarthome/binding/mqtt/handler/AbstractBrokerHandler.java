@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,15 +12,23 @@
  */
 package org.eclipse.smarthome.binding.mqtt.handler;
 
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeoutException;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
+import org.eclipse.smarthome.binding.mqtt.action.MQTTActions;
 import org.eclipse.smarthome.core.thing.Bridge;
+import org.eclipse.smarthome.core.thing.Channel;
 import org.eclipse.smarthome.core.thing.ChannelUID;
 import org.eclipse.smarthome.core.thing.ThingStatus;
 import org.eclipse.smarthome.core.thing.ThingStatusDetail;
 import org.eclipse.smarthome.core.thing.binding.BaseBridgeHandler;
+import org.eclipse.smarthome.core.thing.binding.ThingHandlerService;
 import org.eclipse.smarthome.core.types.Command;
 import org.eclipse.smarthome.io.transport.mqtt.MqttBrokerConnection;
 import org.eclipse.smarthome.io.transport.mqtt.MqttConnectionObserver;
@@ -36,13 +44,29 @@ import org.eclipse.smarthome.io.transport.mqtt.MqttService;
  */
 @NonNullByDefault
 public abstract class AbstractBrokerHandler extends BaseBridgeHandler implements MqttConnectionObserver {
+
     public static int TIMEOUT_DEFAULT = 1200; /* timeout in milliseconds */
-    protected final String brokerID;
-    protected @Nullable MqttBrokerConnection connection;
+    final Map<ChannelUID, PublishTriggerChannel> channelStateByChannelUID = new HashMap<>();
+
+    @NonNullByDefault({})
+    protected MqttBrokerConnection connection;
+    protected CompletableFuture<MqttBrokerConnection> connectionFuture = new CompletableFuture<>();
 
     public AbstractBrokerHandler(Bridge thing) {
         super(thing);
-        this.brokerID = thing.getUID().getId();
+    }
+
+    @Override
+    public Collection<Class<? extends ThingHandlerService>> getServices() {
+        return Collections.singleton(MQTTActions.class);
+    }
+
+    /**
+     * Returns the underlying {@link MqttBrokerConnection} either immediately or after {@link #initialize()} has
+     * performed.
+     */
+    public CompletableFuture<MqttBrokerConnection> getConnectionAsync() {
+        return connectionFuture;
     }
 
     /**
@@ -61,33 +85,39 @@ public abstract class AbstractBrokerHandler extends BaseBridgeHandler implements
     }
 
     /**
-     * Registers a connection status listener and attempts a connection. This should be called only once per connection
-     * object. A connection usually tries to reconnect to the server via the configured reconnect strategy.
-     *
+     * Registers a connection status listener and attempts a connection if there is none so far.
      */
     @Override
     public void initialize() {
-        MqttBrokerConnection c = connection;
-        if (c == null) {
-            return;
+        for (Channel channel : thing.getChannels()) {
+            final PublishTriggerChannelConfig channelConfig = channel.getConfiguration()
+                    .as(PublishTriggerChannelConfig.class);
+            PublishTriggerChannel c = new PublishTriggerChannel(channelConfig, channel.getUID(), connection, this);
+            channelStateByChannelUID.put(channel.getUID(), c);
         }
-        c.addConnectionObserver(this);
 
-        c.start().exceptionally(e -> {
+        connection.addConnectionObserver(this);
+
+        connection.start().exceptionally(e -> {
             connectionStateChanged(MqttConnectionState.DISCONNECTED, e);
             return false;
         }).thenAccept(v -> {
             if (!v) {
                 connectionStateChanged(MqttConnectionState.DISCONNECTED, new TimeoutException("Timeout"));
+            } else {
+                connectionStateChanged(MqttConnectionState.CONNECTED, null);
             }
         });
+        connectionFuture.complete(connection);
     }
 
     @Override
     public void connectionStateChanged(MqttConnectionState state, @Nullable Throwable error) {
         if (state == MqttConnectionState.CONNECTED) {
             updateStatus(ThingStatus.ONLINE);
+            channelStateByChannelUID.values().forEach(c -> c.start());
         } else {
+            channelStateByChannelUID.values().forEach(c -> c.stop());
             if (error == null) {
                 updateStatus(ThingStatus.OFFLINE);
             } else {
@@ -96,15 +126,21 @@ public abstract class AbstractBrokerHandler extends BaseBridgeHandler implements
         }
     }
 
+    @Override
+    protected void triggerChannel(ChannelUID channelUID, String event) {
+        super.triggerChannel(channelUID, event);
+    }
+
     /**
      * Removes listeners to the {@link MqttBrokerConnection}.
      */
     @Override
     public void dispose() {
-        if (connection != null) {
-            connection.removeConnectionObserver(this);
-            connection = null;
-        }
+        channelStateByChannelUID.values().forEach(c -> c.stop());
+        channelStateByChannelUID.clear();
+        connection.removeConnectionObserver(this);
+        this.connection = null;
+        connectionFuture = new CompletableFuture<>();
         super.dispose();
     }
 }

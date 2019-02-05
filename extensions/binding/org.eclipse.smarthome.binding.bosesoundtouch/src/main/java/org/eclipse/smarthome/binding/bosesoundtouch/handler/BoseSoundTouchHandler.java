@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,11 +16,16 @@ import static org.eclipse.smarthome.binding.bosesoundtouch.BoseSoundTouchBinding
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.StatusCode;
@@ -33,6 +38,7 @@ import org.eclipse.jetty.websocket.client.WebSocketClient;
 import org.eclipse.smarthome.binding.bosesoundtouch.BoseSoundTouchConfiguration;
 import org.eclipse.smarthome.binding.bosesoundtouch.internal.APIRequest;
 import org.eclipse.smarthome.binding.bosesoundtouch.internal.BoseSoundTouchNotificationChannelConfiguration;
+import org.eclipse.smarthome.binding.bosesoundtouch.internal.BoseStateDescriptionOptionProvider;
 import org.eclipse.smarthome.binding.bosesoundtouch.internal.CommandExecutor;
 import org.eclipse.smarthome.binding.bosesoundtouch.internal.OperationModeType;
 import org.eclipse.smarthome.binding.bosesoundtouch.internal.PresetContainer;
@@ -54,6 +60,7 @@ import org.eclipse.smarthome.core.thing.type.ChannelTypeUID;
 import org.eclipse.smarthome.core.types.Command;
 import org.eclipse.smarthome.core.types.RefreshType;
 import org.eclipse.smarthome.core.types.State;
+import org.eclipse.smarthome.core.types.StateOption;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -76,14 +83,14 @@ public class BoseSoundTouchHandler extends BaseThingHandler implements WebSocket
 
     private ScheduledFuture<?> connectionChecker;
     private WebSocketClient client;
-    private Session session;
+    private volatile Session session;
+    private volatile CommandExecutor commandExecutor;
+    private volatile int missedPongsCount = 0;
 
     private XMLResponseProcessor xmlResponseProcessor;
-    private CommandExecutor commandExecutor;
 
     private PresetContainer presetContainer;
-    
-    private int missedPongsCount = 0;
+    private BoseStateDescriptionOptionProvider stateOptionProvider;
 
     /**
      * Creates a new instance of this class for the {@link Thing}.
@@ -93,9 +100,11 @@ public class BoseSoundTouchHandler extends BaseThingHandler implements WebSocket
      *
      * @throws IllegalArgumentException if thing or factory argument is null
      */
-    public BoseSoundTouchHandler(Thing thing, PresetContainer presetContainer) {
+    public BoseSoundTouchHandler(Thing thing, PresetContainer presetContainer,
+            BoseStateDescriptionOptionProvider stateOptionProvider) {
         super(thing);
         this.presetContainer = presetContainer;
+        this.stateOptionProvider = stateOptionProvider;
         xmlResponseProcessor = new XMLResponseProcessor(this);
     }
 
@@ -107,31 +116,39 @@ public class BoseSoundTouchHandler extends BaseThingHandler implements WebSocket
 
     @Override
     public void dispose() {
-        super.dispose();
-        closeConnection();
         if (connectionChecker != null && !connectionChecker.isCancelled()) {
-            connectionChecker.cancel(false);
+            connectionChecker.cancel(true);
             connectionChecker = null;
         }
+        closeConnection();
+        super.dispose();
     }
 
     @Override
     public void handleRemoval() {
-        super.handleRemoval();
         presetContainer.clear();
+        super.handleRemoval();
     }
 
-    @Override // just overwrite to give CommandExecutor access
+    @Override
     public void updateState(String channelID, State state) {
-        super.updateState(channelID, state);
+        // don't update channel if it's not linked (in case of Stereo Pair slave device)
+        if (isLinked(channelID)) {
+            super.updateState(channelID, state);
+        } else {
+            logger.debug("{}: Skipping state update because of not linked channel '{}'", getDeviceName(), channelID);
+        }
     }
 
     @Override
     public void handleCommand(ChannelUID channelUID, Command command) {
-        logger.debug("{}: handleCommand({}, {});", getDeviceName(), channelUID, command);
-        if (getThing().getStatus() != ThingStatus.ONLINE) {
-            openConnection(); // try to reconnect....
+        if (commandExecutor == null) {
+            logger.debug("{}: Can't handle command '{}' for channel '{}' because of not initialized connection.", getDeviceName(), command, channelUID);
+            return;
+        } else {
+            logger.debug("{}: handleCommand({}, {});", getDeviceName(), channelUID, command);
         }
+
         if (command.equals(RefreshType.REFRESH)) {
             switch (channelUID.getIdWithoutGroup()) {
                 case CHANNEL_BASS:
@@ -345,9 +362,13 @@ public class BoseSoundTouchHandler extends BaseThingHandler implements WebSocket
     public void onWebSocketError(Throwable e) {
         logger.debug("{}: Error during websocket communication: {}", getDeviceName(), e.getMessage(), e);
         updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, e.getMessage());
-        commandExecutor.postOperationMode(OperationModeType.OFFLINE);
+        if (commandExecutor != null) {
+            commandExecutor.postOperationMode(OperationModeType.OFFLINE);
+            commandExecutor = null;
+        }
         if (session != null) {
             session.close(StatusCode.SERVER_ERROR, getDeviceName() + ": Failure: " + e.getMessage());
+            session = null;
         }
     }
 
@@ -372,9 +393,11 @@ public class BoseSoundTouchHandler extends BaseThingHandler implements WebSocket
         logger.debug("{}: onClose({}, '{}')", getDeviceName(), code, reason);
         missedPongsCount = 0;
         updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, reason);
-        commandExecutor.postOperationMode(OperationModeType.OFFLINE);
+        if (commandExecutor != null) {
+            commandExecutor.postOperationMode(OperationModeType.OFFLINE);
+        }
     }
-    
+
     @Override
     public void onWebSocketFrame(Frame frame) {
         if (frame.getType() == Type.PONG) {
@@ -382,7 +405,7 @@ public class BoseSoundTouchHandler extends BaseThingHandler implements WebSocket
         }
     }
 
-    private void openConnection() {
+    private synchronized void openConnection() {
         closeConnection();
         try {
             client = new WebSocketClient();
@@ -393,14 +416,15 @@ public class BoseSoundTouchHandler extends BaseThingHandler implements WebSocket
             logger.debug("{}: Connecting to: {}", getDeviceName(), wsUrl);
             ClientUpgradeRequest request = new ClientUpgradeRequest();
             request.setSubProtocols("gabbo");
+            client.setStopTimeout(1000);
             client.start();
             client.connect(this, new URI(wsUrl), request);
         } catch (Exception e) {
             onWebSocketError(e);
         }
     }
-    
-    private void closeConnection() {
+
+    private synchronized void closeConnection() {
         if (session != null) {
             try {
                 session.close(StatusCode.NORMAL, "Binding shutdown");
@@ -420,10 +444,13 @@ public class BoseSoundTouchHandler extends BaseThingHandler implements WebSocket
             }
             client = null;
         }
+
+        commandExecutor = null;
     }
 
     private void checkConnection() {
-        if (getThing().getStatus() != ThingStatus.ONLINE) {
+        if (getThing().getStatus() != ThingStatus.ONLINE || session == null || client == null
+                || commandExecutor == null) {
             openConnection(); // try to reconnect....
         }
 
@@ -436,8 +463,10 @@ public class BoseSoundTouchHandler extends BaseThingHandler implements WebSocket
                 closeConnection();
                 openConnection();
             }
-            
-            if (missedPongsCount == MAX_MISSED_PONGS_COUNT) {
+
+            if (missedPongsCount >= MAX_MISSED_PONGS_COUNT) {
+                logger.debug("{}: Closing connection because of too many missed PONGs: {} (max allowed {}) ",
+                        getDeviceName(), missedPongsCount, MAX_MISSED_PONGS_COUNT);
                 missedPongsCount = 0;
                 closeConnection();
                 openConnection();
@@ -445,4 +474,75 @@ public class BoseSoundTouchHandler extends BaseThingHandler implements WebSocket
         }
     }
 
+    public void refreshPresetChannel() {
+        List<StateOption> stateOptions = presetContainer.getAllPresets().stream()
+                .map(e -> e.toStateOption())
+                .sorted(Comparator.comparing(StateOption::getValue)).collect(Collectors.toList());
+        stateOptionProvider.setStateOptions(new ChannelUID(getThing().getUID(), CHANNEL_PRESET), stateOptions);
+    }
+
+    public void handleGroupUpdated(BoseSoundTouchConfiguration masterPlayerConfiguration) {
+        String deviceId = getMacAddress();
+        
+        if (masterPlayerConfiguration != null && masterPlayerConfiguration.macAddress != null) {
+            // Stereo pair
+            if (Objects.equals(masterPlayerConfiguration.macAddress, deviceId)) {
+                if (getThing().getThingTypeUID().equals(BST_10_THING_TYPE_UID)) {
+                    logger.debug("{}: Stereo Pair was created and this is the master device.", getDeviceName());
+                } else {
+                    logger.debug("{}: Unsupported operation for player of type: {}", getDeviceName(),
+                            getThing().getThingTypeUID());
+                }
+            } else {
+                if (getThing().getThingTypeUID().equals(BST_10_THING_TYPE_UID)) {
+                    logger.debug("{}: Stereo Pair was created and this is NOT the master device.", getDeviceName());
+                    updateThing(editThing().withChannels(Collections.emptyList()).build());
+                } else {
+                    logger.debug("{}: Unsupported operation for player of type: {}", getDeviceName(),
+                            getThing().getThingTypeUID());
+                }
+            }
+        } else {
+            // NO Stereo Pair
+            if (getThing().getThingTypeUID().equals(BST_10_THING_TYPE_UID)) {
+                if (getThing().getChannels().isEmpty()) {
+                    logger.debug("{}: Stereo Pair was disbounded. Restoring channels", getDeviceName());
+                    updateThing(editThing().withChannels(getAllChannels()).build());
+                } else {
+                    logger.debug("{}: Stereo Pair was disbounded.", getDeviceName());
+                }
+            } else {
+                logger.debug("{}: Unsupported operation for player of type: {}", getDeviceName(),
+                        getThing().getThingTypeUID());
+            }
+        }
+    }
+    
+    private List<Channel> getAllChannels() {
+        List<Channel> allChannels = new ArrayList<>();
+        allChannels.add(getCallback().createChannelBuilder(new ChannelUID(getThing().getUID(), CHANNEL_POWER), new ChannelTypeUID(BINDING_ID, CHANNEL_POWER)).build());
+        allChannels.add(getCallback().createChannelBuilder(new ChannelUID(getThing().getUID(), CHANNEL_VOLUME), new ChannelTypeUID(BINDING_ID, CHANNEL_VOLUME)).build());
+        allChannels.add(getCallback().createChannelBuilder(new ChannelUID(getThing().getUID(), CHANNEL_MUTE), new ChannelTypeUID(BINDING_ID, CHANNEL_MUTE)).build());
+        allChannels.add(getCallback().createChannelBuilder(new ChannelUID(getThing().getUID(), CHANNEL_OPERATIONMODE), new ChannelTypeUID(BINDING_ID, "operationMode_BST_10_20_30")).build());
+        allChannels.add(getCallback().createChannelBuilder(new ChannelUID(getThing().getUID(), CHANNEL_PLAYER_CONTROL), new ChannelTypeUID(BINDING_ID, CHANNEL_PLAYER_CONTROL)).build());
+        allChannels.add(getCallback().createChannelBuilder(new ChannelUID(getThing().getUID(), CHANNEL_PRESET), new ChannelTypeUID(BINDING_ID, CHANNEL_PRESET)).build());
+        allChannels.add(getCallback().createChannelBuilder(new ChannelUID(getThing().getUID(), CHANNEL_BASS), new ChannelTypeUID(BINDING_ID, CHANNEL_BASS)).build());
+        allChannels.add(getCallback().createChannelBuilder(new ChannelUID(getThing().getUID(), CHANNEL_RATEENABLED), new ChannelTypeUID(BINDING_ID, CHANNEL_RATEENABLED)).build());
+        allChannels.add(getCallback().createChannelBuilder(new ChannelUID(getThing().getUID(), CHANNEL_SKIPENABLED), new ChannelTypeUID(BINDING_ID, CHANNEL_SKIPENABLED)).build());
+        allChannels.add(getCallback().createChannelBuilder(new ChannelUID(getThing().getUID(), CHANNEL_SKIPPREVIOUSENABLED), new ChannelTypeUID(BINDING_ID, CHANNEL_SKIPPREVIOUSENABLED)).build());
+        allChannels.add(getCallback().createChannelBuilder(new ChannelUID(getThing().getUID(), CHANNEL_SAVE_AS_PRESET), new ChannelTypeUID(BINDING_ID, CHANNEL_SAVE_AS_PRESET)).build());
+        allChannels.add(getCallback().createChannelBuilder(new ChannelUID(getThing().getUID(), CHANNEL_KEY_CODE), new ChannelTypeUID(BINDING_ID, CHANNEL_KEY_CODE)).build());
+        allChannels.add(getCallback().createChannelBuilder(new ChannelUID(getThing().getUID(), CHANNEL_NOWPLAYING_ALBUM), new ChannelTypeUID(BINDING_ID, CHANNEL_NOWPLAYING_ALBUM)).build());
+        allChannels.add(getCallback().createChannelBuilder(new ChannelUID(getThing().getUID(), CHANNEL_NOWPLAYING_ARTWORK), new ChannelTypeUID(BINDING_ID, CHANNEL_NOWPLAYING_ARTWORK)).build());
+        allChannels.add(getCallback().createChannelBuilder(new ChannelUID(getThing().getUID(), CHANNEL_NOWPLAYING_ARTIST), new ChannelTypeUID(BINDING_ID, CHANNEL_NOWPLAYING_ARTIST)).build());
+        allChannels.add(getCallback().createChannelBuilder(new ChannelUID(getThing().getUID(), CHANNEL_NOWPLAYING_DESCRIPTION), new ChannelTypeUID(BINDING_ID, CHANNEL_NOWPLAYING_DESCRIPTION)).build());
+        allChannels.add(getCallback().createChannelBuilder(new ChannelUID(getThing().getUID(), CHANNEL_NOWPLAYING_GENRE), new ChannelTypeUID(BINDING_ID, CHANNEL_NOWPLAYING_GENRE)).build());
+        allChannels.add(getCallback().createChannelBuilder(new ChannelUID(getThing().getUID(), CHANNEL_NOWPLAYING_ITEMNAME), new ChannelTypeUID(BINDING_ID, CHANNEL_NOWPLAYING_ITEMNAME)).build());
+        allChannels.add(getCallback().createChannelBuilder(new ChannelUID(getThing().getUID(), CHANNEL_NOWPLAYING_STATIONLOCATION), new ChannelTypeUID(BINDING_ID, CHANNEL_NOWPLAYING_STATIONLOCATION)).build());
+        allChannels.add(getCallback().createChannelBuilder(new ChannelUID(getThing().getUID(), CHANNEL_NOWPLAYING_STATIONNAME), new ChannelTypeUID(BINDING_ID, CHANNEL_NOWPLAYING_STATIONNAME)).build());
+        allChannels.add(getCallback().createChannelBuilder(new ChannelUID(getThing().getUID(), CHANNEL_NOWPLAYING_TRACK), new ChannelTypeUID(BINDING_ID, CHANNEL_NOWPLAYING_TRACK)).build());
+        allChannels.add(getCallback().createChannelBuilder(new ChannelUID(getThing().getUID(), CHANNEL_NOTIFICATION_SOUND), new ChannelTypeUID(BINDING_ID, CHANNEL_NOTIFICATION_SOUND)).build());
+        
+        return allChannels;
+    }
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -47,7 +47,7 @@ import org.slf4j.LoggerFactory;
 @Component(service = DiscoveryService.class, immediate = true, configurationPid = "discovery.astro")
 public class AstroDiscoveryService extends AbstractDiscoveryService {
     private final Logger logger = LoggerFactory.getLogger(AstroDiscoveryService.class);
-    private static final int DISCOVER_TIMEOUT_SECONDS = 30;
+    private static final int DISCOVER_TIMEOUT_SECONDS = 2;
     private static final int LOCATION_CHANGED_CHECK_INTERVAL = 60;
     private LocationProvider locationProvider;
     private ScheduledFuture<?> astroDiscoveryJob;

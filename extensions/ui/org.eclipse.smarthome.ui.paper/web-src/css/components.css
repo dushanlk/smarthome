@@ -1015,6 +1015,10 @@ md-chips strong {
 	outline: 0;
 }
 
+.thing.disabled .description {
+    color: grey;
+}
+
 .material-icons.color-remove {
 	font-size: 12px;
 	margin-top: 10px;
@@ -1382,16 +1386,11 @@ input[type=number].multiSel::-webkit-outer-spin-button {
 	cursor:pointer;
 }
 
-.textControl {
+.text-control {
 	height: 100%;
 }
 
-.textControl .state {
-	font-size: 30px;
-	font-weight: 300;
-}
-
-.textControl .minDimension {
+.text-control .minDimension {
 	min-height: 40px;
 	min-width: 140px;
 }
@@ -1518,6 +1517,14 @@ search-field i {
 
 md-input-container .md-input.location-input {
 	float: none;
+}
+
+.items .item form[name=locationForm] md-input-container {
+    margin: -25px 0 0 0;
+}
+
+.location-edit {
+	margin-top: 10px;
 }
 
 .map-container {

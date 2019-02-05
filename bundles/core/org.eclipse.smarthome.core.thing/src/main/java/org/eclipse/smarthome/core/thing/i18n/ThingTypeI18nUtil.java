@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -50,7 +50,7 @@ public class ThingTypeI18nUtil {
     }
 
     public @Nullable String getChannelDescription(Bundle bundle, ThingTypeUID thingTypeUID, ChannelDefinition channel,
-            String defaultDescription, @Nullable Locale locale) {
+            @Nullable String defaultDescription, @Nullable Locale locale) {
         String key = I18nUtil.stripConstantOr(defaultDescription,
                 () -> inferThingTypeKey(thingTypeUID, channel, "description"));
         return i18nProvider.getText(bundle, key, defaultDescription, locale);
@@ -64,7 +64,7 @@ public class ThingTypeI18nUtil {
     }
 
     public @Nullable String getChannelDescription(Bundle bundle, ChannelGroupTypeUID channelGroupTypeUID,
-            ChannelDefinition channel, String defaultLabel, @Nullable Locale locale) {
+            ChannelDefinition channel, @Nullable String defaultLabel, @Nullable Locale locale) {
         String key = I18nUtil.stripConstantOr(defaultLabel,
                 () -> inferChannelGroupKey(channelGroupTypeUID, channel, "description"));
         return i18nProvider.getText(bundle, key, defaultLabel, locale);
@@ -84,14 +84,14 @@ public class ThingTypeI18nUtil {
     }
 
     public @Nullable String getChannelLabel(Bundle bundle, ChannelGroupTypeUID channelGroupTypeUID,
-            ChannelDefinition channel, String defaultLabel, @Nullable Locale locale) {
+            ChannelDefinition channel, @Nullable String defaultLabel, @Nullable Locale locale) {
         String key = I18nUtil.stripConstantOr(defaultLabel,
                 () -> inferChannelGroupKey(channelGroupTypeUID, channel, "label"));
         return i18nProvider.getText(bundle, key, defaultLabel, locale);
     }
 
     public @Nullable String getChannelLabel(Bundle bundle, ThingTypeUID thingTypeUID, ChannelDefinition channel,
-            String defaultLabel, @Nullable Locale locale) {
+            @Nullable String defaultLabel, @Nullable Locale locale) {
         String key = I18nUtil.stripConstantOr(defaultLabel, () -> inferThingTypeKey(thingTypeUID, channel, "label"));
         return i18nProvider.getText(bundle, key, defaultLabel, locale);
     }
@@ -113,6 +113,13 @@ public class ThingTypeI18nUtil {
             String defaultOptionLabel, @Nullable Locale locale) {
         String key = I18nUtil.stripConstantOr(defaultOptionLabel,
                 () -> inferChannelKey(channelTypeUID, "state.option." + optionValue));
+        return i18nProvider.getText(bundle, key, defaultOptionLabel, locale);
+    }
+
+    public @Nullable String getChannelCommandOption(Bundle bundle, ChannelTypeUID channelTypeUID, String optionValue,
+            String defaultOptionLabel, @Nullable Locale locale) {
+        String key = I18nUtil.stripConstantOr(defaultOptionLabel,
+                () -> inferChannelKey(channelTypeUID, "command.option." + optionValue));
         return i18nProvider.getText(bundle, key, defaultOptionLabel, locale);
     }
 

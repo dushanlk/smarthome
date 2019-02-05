@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -59,7 +59,8 @@ public class Eq3UdpResponse {
      * Returns true, if this response is from a Homematic CCU gateway.
      */
     public boolean isValid() {
-        return this.senderId == Eq3UdpRequest.getSenderId() && deviceTypeId.startsWith("eQ3-HM-CCU")
+        return this.senderId == Eq3UdpRequest.getSenderId()
+                && (deviceTypeId.startsWith("eQ3-HM-CCU") || deviceTypeId.startsWith("eQ3-HmIP-CCU3"))
                 && !serialNumber.contains(Eq3UdpRequest.getEq3SerialNumber());
     }
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -44,7 +44,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Utility methods for creation of Things.
  *
- * It is supposed to contain methods that are commonly shared between {@link ThingManager} and {@link ThingFactory}.
+ * It is supposed to contain methods that are commonly shared between {@link ThingManagerImpl} and {@link ThingFactory}.
  *
  * @author Simon Kaufmann - Initial contribution and API
  * @author Kai Kreuzer - Changed creation of channels to not require a thing type
@@ -153,13 +153,15 @@ public class ThingFactoryHelper {
         ChannelBuilder channelBuilder = createChannelBuilder(channelUID, type, configDescriptionRegistry);
 
         // If we want to override the label, add it...
-        if (channelDefinition.getLabel() != null) {
-            channelBuilder = channelBuilder.withLabel(channelDefinition.getLabel());
+        final String label = channelDefinition.getLabel();
+        if (label != null) {
+            channelBuilder = channelBuilder.withLabel(label);
         }
 
         // If we want to override the description, add it...
-        if (channelDefinition.getDescription() != null) {
-            channelBuilder = channelBuilder.withDescription(channelDefinition.getDescription());
+        final String description = channelDefinition.getDescription();
+        if (description != null) {
+            channelBuilder = channelBuilder.withDescription(description);
         }
 
         channelBuilder = channelBuilder.withProperties(channelDefinition.getProperties());
@@ -237,12 +239,11 @@ public class ThingFactoryHelper {
     /**
      * Apply the {@link ThingType}'s default values to the given {@link Configuration}.
      *
-     * @param configuration the {@link Configuration} where the default values should be added (may be null, but method
-     *            won't have any effect then)
+     * @param configuration the {@link Configuration} where the default values should be added (may be null,
+     *            but method won't have any effect then)
      * @param thingType the {@link ThingType} where to look for the default values (must not be null)
      * @param configDescriptionRegistry the {@link ConfigDescriptionRegistry} to use (may be null, but method won't have
-     *            any
-     *            effect then)
+     *            any effect then)
      */
     public static void applyDefaultConfiguration(Configuration configuration, ThingType thingType,
             ConfigDescriptionRegistry configDescriptionRegistry) {

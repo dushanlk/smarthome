@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 
-	Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+	Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
 
 	See the NOTICE file(s) distributed with this work for additional
 	information regarding copyright ownership.
@@ -16,7 +16,7 @@
 <feature
       id="org.eclipse.smarthome.feature.runtime.binding"
       label="Eclipse SmartHome Binding"
-      version="0.10.0.qualifier"
+      version="0.11.0.qualifier"
       provider-name="Eclipse.org/SmartHome">
 
    <description>
@@ -109,7 +109,21 @@
          unpack="false"/>
 
    <plugin
+         id="org.eclipse.smarthome.binding.meteoblue"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"
+         unpack="false"/>
+
+   <plugin
          id="org.eclipse.smarthome.binding.mqtt"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"
+         unpack="false"/>
+
+   <plugin
+         id="org.eclipse.smarthome.binding.mqtt.generic"
          download-size="0"
          install-size="0"
          version="0.0.0"
@@ -130,7 +144,21 @@
          unpack="false"/>
 
    <plugin
+         id="org.eclipse.smarthome.binding.openweathermap"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"
+         unpack="false"/>
+
+   <plugin
          id="org.eclipse.smarthome.binding.sonos"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"
+         unpack="false"/>
+
+   <plugin
+         id="org.eclipse.smarthome.binding.sonyaudio"
          download-size="0"
          install-size="0"
          version="0.0.0"
@@ -159,13 +187,6 @@
 
    <plugin
          id="org.eclipse.smarthome.binding.wemo"
-         download-size="0"
-         install-size="0"
-         version="0.0.0"
-         unpack="false"/>
-
-   <plugin
-         id="org.eclipse.smarthome.binding.yahooweather"
          download-size="0"
          install-size="0"
          version="0.0.0"

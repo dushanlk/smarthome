@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,6 +13,9 @@
 package org.eclipse.smarthome.binding.mqtt.handler;
 
 import java.security.NoSuchAlgorithmException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.lang.StringUtils;
 import org.eclipse.jdt.annotation.NonNullByDefault;
@@ -55,9 +58,9 @@ public class BrokerHandler extends AbstractBrokerHandler implements PinnedCallba
     public void connectionStateChanged(MqttConnectionState state, @Nullable Throwable error) {
         super.connectionStateChanged(state, error);
         // Store generated client ID if none was set by the user
-        MqttBrokerConnection c = connection;
-        if (c != null && state == MqttConnectionState.CONNECTED && StringUtils.isBlank(config.clientID)) {
-            config.clientID = c.getClientId();
+        final MqttBrokerConnection connection = this.connection;
+        if (connection != null && state == MqttConnectionState.CONNECTED && StringUtils.isBlank(config.clientID)) {
+            config.clientID = connection.getClientId();
             Configuration editConfig = editConfiguration();
             editConfig.put("clientid", config.clientID);
             updateConfiguration(editConfig);
@@ -107,8 +110,9 @@ public class BrokerHandler extends AbstractBrokerHandler implements PinnedCallba
 
     @Override
     public void dispose() {
-        if (connection != null) {
-            connection.stop();
+        try {
+            connection.stop().get(1000, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException | ExecutionException | TimeoutException ignore) {
         }
         super.dispose();
     }
@@ -122,11 +126,12 @@ public class BrokerHandler extends AbstractBrokerHandler implements PinnedCallba
      * @throws IllegalArgumentException Throws this exception, if provided hash values cannot be
      *             assigned to the {@link PinningSSLContextProvider}.
      */
-    protected void assignSSLContextProvider(MqttBrokerConnection connection) throws IllegalArgumentException {
-        PinTrustManager trustManager = new PinTrustManager();
+    protected void assignSSLContextProvider(BrokerHandlerConfig config, MqttBrokerConnection connection,
+            PinnedCallback callback) throws IllegalArgumentException {
+        final PinTrustManager trustManager = new PinTrustManager();
 
         connection.setSSLContextProvider(new PinningSSLContextProvider(trustManager));
-        trustManager.setCallback(this);
+        trustManager.setCallback(callback);
 
         if (config.certificatepin) {
             try {
@@ -177,46 +182,46 @@ public class BrokerHandler extends AbstractBrokerHandler implements PinnedCallba
         if (StringUtils.isBlank(host) || host == null) {
             throw new IllegalArgumentException("Host is empty!");
         }
-        MqttBrokerConnection c = new MqttBrokerConnection(host, config.port, false, config.clientID);
 
-        String username = config.username;
-        String password = config.password;
+        final MqttBrokerConnection connection = new MqttBrokerConnection(host, config.port, config.secure,
+                config.clientID);
+
+        final String username = config.username;
+        final String password = config.password;
         if (StringUtils.isNotBlank(username) && password != null) {
-            c.setCredentials(username, password); // Empty passwords are allowed
+            connection.setCredentials(username, password); // Empty passwords are allowed
         }
 
-        if (config.lwtTopic != null) {
-            String topic = config.lwtTopic;
-            MqttWillAndTestament will = new MqttWillAndTestament(topic,
-                    config.lwtMessage != null ? config.lwtMessage.getBytes() : null, config.lwtQos, config.lwtRetain);
-            logger.debug("Setting last will: {}", will);
-            c.setLastWill(will);
+        final String topic = config.lwtTopic;
+        if (topic != null) {
+            final String msg = config.lwtMessage;
+            MqttWillAndTestament will = new MqttWillAndTestament(topic, msg != null ? msg.getBytes() : null,
+                    config.lwtQos, config.lwtRetain);
+            connection.setLastWill(will);
         }
 
-        c.setQos(config.qos);
+        connection.setQos(config.qos);
         if (config.reconnectTime != null) {
-            c.setReconnectStrategy(new PeriodicReconnectStrategy(config.reconnectTime, 10000));
+            connection.setReconnectStrategy(new PeriodicReconnectStrategy(config.reconnectTime, 10000));
         }
-        if (config.keepAlive != null) {
-            c.setKeepAliveInterval(config.keepAlive);
+        final Integer keepAlive = config.keepAlive;
+        if (keepAlive != null) {
+            connection.setKeepAliveInterval(keepAlive);
         }
         if (config.timeoutInMs != null) {
-            c.setTimeoutExecutor(scheduler, TIMEOUT_DEFAULT);
+            connection.setTimeoutExecutor(scheduler, TIMEOUT_DEFAULT);
         }
 
-        c.setRetain(config.retainMessages);
+        connection.setRetain(config.retainMessages);
 
-        return c;
+        return connection;
     }
 
     @Override
     public void initialize() {
-        config = getConfig().as(BrokerHandlerConfig.class);
-
-        MqttBrokerConnection c = createBrokerConnection();
-        connection = c;
-
-        assignSSLContextProvider(c);
+        config = getConfigAs(BrokerHandlerConfig.class);
+        connection = createBrokerConnection();
+        assignSSLContextProvider(config, connection, this);
         super.initialize();
     }
 }

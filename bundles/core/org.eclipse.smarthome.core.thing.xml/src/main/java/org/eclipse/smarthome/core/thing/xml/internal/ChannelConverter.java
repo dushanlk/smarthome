@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -60,8 +60,8 @@ public class ChannelConverter extends GenericUnmarshaller<ChannelXmlResult> {
         String typeId = attributes.get("typeId");
         String label = (String) nodeIterator.nextValue("label", false);
         String description = (String) nodeIterator.nextValue("description", false);
-        AutoUpdatePolicy autoUpdatePolicy = readAutoUpdatePolicy(nodeIterator);
         List<NodeValue> properties = getProperties(nodeIterator);
+        AutoUpdatePolicy autoUpdatePolicy = readAutoUpdatePolicy(nodeIterator);
 
         ChannelXmlResult channelXmlResult = new ChannelXmlResult(id, typeId, label, description, properties,
                 autoUpdatePolicy);

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,7 +15,6 @@ package org.eclipse.smarthome.io.rest.core.internal.item;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -48,11 +47,10 @@ import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.core.auth.Role;
 import org.eclipse.smarthome.core.events.EventPublisher;
-import org.eclipse.smarthome.core.items.ActiveItem;
 import org.eclipse.smarthome.core.items.GenericItem;
 import org.eclipse.smarthome.core.items.GroupItem;
 import org.eclipse.smarthome.core.items.Item;
-import org.eclipse.smarthome.core.items.ItemFactory;
+import org.eclipse.smarthome.core.items.ItemBuilderFactory;
 import org.eclipse.smarthome.core.items.ItemNotFoundException;
 import org.eclipse.smarthome.core.items.ItemRegistry;
 import org.eclipse.smarthome.core.items.ManagedItemProvider;
@@ -141,8 +139,9 @@ public class ItemResource implements RESTResource {
     private DTOMapper dtoMapper;
     @NonNullByDefault({})
     private MetadataSelectorMatcher metadataSelectorMatcher;
+    @NonNullByDefault({})
+    private ItemBuilderFactory itemBuilderFactory;
 
-    private final Set<ItemFactory> itemFactories = new HashSet<>();
     @NonNullByDefault({})
     private LocaleService localeService;
 
@@ -182,15 +181,6 @@ public class ItemResource implements RESTResource {
         this.managedItemProvider = null;
     }
 
-    @Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
-    protected void addItemFactory(ItemFactory itemFactory) {
-        this.itemFactories.add(itemFactory);
-    }
-
-    protected void removeItemFactory(ItemFactory itemFactory) {
-        this.itemFactories.remove(itemFactory);
-    }
-
     @Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC)
     protected void setDTOMapper(DTOMapper dtoMapper) {
         this.dtoMapper = dtoMapper;
@@ -216,6 +206,15 @@ public class ItemResource implements RESTResource {
 
     protected void unsetMetadataSelectorMatcher(MetadataSelectorMatcher metadataSelectorMatcher) {
         this.metadataSelectorMatcher = null;
+    }
+
+    @Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC)
+    public void setItemBuilderFactory(ItemBuilderFactory itemBuilderFactory) {
+        this.itemBuilderFactory = itemBuilderFactory;
+    }
+
+    public void unsetItemBuilderFactory(ItemBuilderFactory itemBuilderFactory) {
+        this.itemBuilderFactory = null;
     }
 
     @GET
@@ -504,7 +503,7 @@ public class ItemResource implements RESTResource {
             return Response.status(Status.METHOD_NOT_ALLOWED).build();
         }
 
-        ((ActiveItem) item).addTag(tag);
+        ((GenericItem) item).addTag(tag);
         managedItemProvider.update(item);
 
         return Response.ok(null, MediaType.TEXT_PLAIN).build();
@@ -530,7 +529,7 @@ public class ItemResource implements RESTResource {
             return Response.status(Status.METHOD_NOT_ALLOWED).build();
         }
 
-        ((ActiveItem) item).removeTag(tag);
+        ((GenericItem) item).removeTag(tag);
         managedItemProvider.update(item);
 
         return Response.ok(null, MediaType.TEXT_PLAIN).build();
@@ -544,6 +543,7 @@ public class ItemResource implements RESTResource {
     @ApiResponses(value = { //
             @ApiResponse(code = 200, message = "OK"), //
             @ApiResponse(code = 201, message = "Created"), //
+            @ApiResponse(code = 400, message = "Metadata value empty."), //
             @ApiResponse(code = 404, message = "Item not found."), //
             @ApiResponse(code = 405, message = "Metadata not editable.") })
     public Response addMetadata(@PathParam("itemname") @ApiParam(value = "item name", required = true) String itemname,
@@ -557,8 +557,15 @@ public class ItemResource implements RESTResource {
             return Response.status(Status.NOT_FOUND).build();
         }
 
+        String value = metadata.value;
+        if (value == null || value.isEmpty()) {
+            logger.info("Received HTTP PUT request at '{}' for item '{}' with empty metadata.", uriInfo.getPath(),
+                    itemname);
+            return Response.status(Status.BAD_REQUEST).build();
+        }
+
         MetadataKey key = new MetadataKey(namespace, itemname);
-        Metadata md = new Metadata(key, metadata.value, metadata.config);
+        Metadata md = new Metadata(key, value, metadata.config);
         if (metadataRegistry.get(key) == null) {
             metadataRegistry.add(md);
             return Response.status(Status.CREATED).type(MediaType.TEXT_PLAIN).build();
@@ -622,7 +629,7 @@ public class ItemResource implements RESTResource {
     public Response createOrUpdateItem(
             @HeaderParam(HttpHeaders.ACCEPT_LANGUAGE) @ApiParam(value = "language") String language,
             @PathParam("itemname") @ApiParam(value = "item name", required = true) String itemname,
-            @ApiParam(value = "item data", required = true) GroupItemDTO item) {
+            @ApiParam(value = "item data", required = true) @Nullable GroupItemDTO item) {
         final Locale locale = localeService.getLocale(language);
 
         // If we didn't get an item bean, then return!
@@ -630,7 +637,7 @@ public class ItemResource implements RESTResource {
             return Response.status(Status.BAD_REQUEST).build();
         }
 
-        Item newItem = ItemDTOMapper.map(item, itemRegistry);
+        Item newItem = ItemDTOMapper.map(item, itemBuilderFactory);
         if (newItem == null) {
             logger.warn("Received HTTP PUT request at '{}' with an invalid item type '{}'.", uriInfo.getPath(),
                     item.type);
@@ -666,7 +673,8 @@ public class ItemResource implements RESTResource {
     @ApiOperation(value = "Adds a list of items to the registry or updates the existing items.")
     @ApiResponses(value = { @ApiResponse(code = 200, message = "OK", response = String.class),
             @ApiResponse(code = 400, message = "Item list is null.") })
-    public Response createOrUpdateItems(@ApiParam(value = "array of item data", required = true) GroupItemDTO[] items) {
+    public Response createOrUpdateItems(
+            @ApiParam(value = "array of item data", required = true) GroupItemDTO @Nullable [] items) {
         // If we didn't get an item list bean, then return!
         if (items == null) {
             return Response.status(Status.BAD_REQUEST).build();
@@ -677,7 +685,7 @@ public class ItemResource implements RESTResource {
         Map<String, Collection<String>> tagMap = new HashMap<>();
 
         for (GroupItemDTO item : items) {
-            Item newItem = ItemDTOMapper.map(item, itemRegistry);
+            Item newItem = ItemDTOMapper.map(item, itemBuilderFactory);
             if (newItem == null) {
                 wrongTypes.add(item);
                 tagMap.put(item.name, item.tags);
@@ -819,8 +827,8 @@ public class ItemResource implements RESTResource {
 
     @Override
     public boolean isSatisfied() {
-        return itemRegistry != null && managedItemProvider != null && eventPublisher != null && !itemFactories.isEmpty()
-                && dtoMapper != null && metadataRegistry != null && metadataSelectorMatcher != null
-                && localeService != null;
+        return itemRegistry != null && managedItemProvider != null && eventPublisher != null
+                && itemBuilderFactory != null && dtoMapper != null && metadataRegistry != null
+                && metadataSelectorMatcher != null && localeService != null;
     }
 }

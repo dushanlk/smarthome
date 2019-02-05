@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -41,6 +41,12 @@ public class ChannelUID extends UID {
         super();
     }
 
+    /**
+     * Parses a {@link ChannelUID} for a given string. The UID must be in the format
+     * 'bindingId:segment:segment:...'.
+     *
+     * @param channelUid uid in form a string (must not be null)
+     */
     public ChannelUID(String channelUid) {
         super(channelUid);
     }

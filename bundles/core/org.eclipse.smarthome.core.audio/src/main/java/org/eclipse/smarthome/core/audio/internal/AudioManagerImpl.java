@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -289,12 +289,13 @@ public class AudioManagerImpl implements AudioManager, ConfigOptionProvider {
     @Override
     public Collection<ParameterOption> getParameterOptions(URI uri, String param, Locale locale) {
         if (uri.toString().equals(CONFIG_URI)) {
+            final Locale safeLocale = locale != null ? locale : Locale.getDefault();
             if (CONFIG_DEFAULT_SOURCE.equals(param)) {
-                return audioSources.values().stream().sorted(comparing(s -> s.getLabel(locale)))
-                        .map(s -> new ParameterOption(s.getId(), s.getLabel(locale))).collect(toList());
+                return audioSources.values().stream().sorted(comparing(s -> s.getLabel(safeLocale)))
+                        .map(s -> new ParameterOption(s.getId(), s.getLabel(safeLocale))).collect(toList());
             } else if (CONFIG_DEFAULT_SINK.equals(param)) {
-                return audioSinks.values().stream().sorted(comparing(s -> s.getLabel(locale)))
-                        .map(s -> new ParameterOption(s.getId(), s.getLabel(locale))).collect(toList());
+                return audioSinks.values().stream().sorted(comparing(s -> s.getLabel(safeLocale)))
+                        .map(s -> new ParameterOption(s.getId(), s.getLabel(safeLocale))).collect(toList());
             }
         }
         return null;

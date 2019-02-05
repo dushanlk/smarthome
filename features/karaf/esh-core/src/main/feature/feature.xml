@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 
-	Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+	Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
 
 	See the NOTICE file(s) distributed with this work for additional
 	information regarding copyright ownership.
@@ -21,11 +21,14 @@
     <requirement>esh.tp;filter:="(feature=base)"</requirement>
     <feature dependency="true">esh.tp-base</feature>
 
-    <requirement>esh.tp;filter:="(&amp;(feature=xtext)(version&gt;=2.12.0)(!(version&gt;=2.13.0)))"</requirement>
+    <requirement>esh.tp;filter:="(&amp;(feature=xtext)(version&gt;=2.14.0)(!(version&gt;=2.15.0)))"</requirement>
     <feature dependency="true">esh.tp-xtext</feature>
 
     <requirement>esh.tp;filter:="(feature=jax-rs)"</requirement>
     <feature dependency="true">esh.tp-jax-rs</feature>
+
+    <requirement>esh.tp;filter:="(feature=httpclient)"</requirement>
+    <feature dependency="true">esh.tp-httpclient</feature>
 
     <bundle>mvn:org.eclipse.smarthome.config/org.eclipse.smarthome.config.core/${project.version}</bundle>
     <capability>
@@ -78,6 +81,11 @@
       osgi.service;objectClass=org.eclipse.smarthome.core.persistence.PersistenceServiceRegistry
     </capability>
 
+    <bundle>mvn:org.eclipse.smarthome.core/org.eclipse.smarthome.core.semantics/${project.version}</bundle>
+    <capability>
+      osgi.service;objectClass=org.eclipse.smarthome.core.semantics.TagService
+    </capability>
+
     <bundle>mvn:org.eclipse.smarthome.core/org.eclipse.smarthome.core.scheduler/${project.version}</bundle>
 
     <bundle>mvn:org.eclipse.smarthome.core/org.eclipse.smarthome.core.thing/${project.version}</bundle>
@@ -127,7 +135,7 @@
     <bundle>mvn:org.eclipse.smarthome.io/org.eclipse.smarthome.io.console/${project.version}</bundle>
     <bundle>mvn:org.eclipse.smarthome.io/org.eclipse.smarthome.io.monitor/${project.version}</bundle>
     <bundle>mvn:org.eclipse.smarthome.io/org.eclipse.smarthome.io.net/${project.version}</bundle>
-
+    <bundle>mvn:org.eclipse.smarthome.io/org.eclipse.smarthome.io.http/${project.version}</bundle>
     <bundle>mvn:org.eclipse.smarthome.io/org.eclipse.smarthome.io.rest/${project.version}</bundle>
     <capability>
       osgi.service;objectClass:List&lt;String&gt;=org.eclipse.smarthome.io.rest.LocaleService
@@ -141,7 +149,6 @@
     </capability>
 
     <bundle>mvn:org.eclipse.smarthome.io/org.eclipse.smarthome.io.rest.sse/${project.version}</bundle>
-    <bundle>mvn:org.eclipse.smarthome.model/org.eclipse.smarthome.model.core/${project.version}</bundle>
   </feature>
 
   <!-- optional ESH bundles -->
@@ -149,6 +156,11 @@
   <feature name="esh-auth-jaas" version="${project.version}">
     <feature>esh-base</feature>
     <bundle>mvn:org.eclipse.smarthome.auth/org.eclipse.smarthome.auth.jaas/${project.version}</bundle>
+  </feature>
+
+  <feature name="esh-auth-oauth2client" version="${project.version}">
+    <feature>esh-base</feature>
+    <bundle>mvn:org.eclipse.smarthome.auth/org.eclipse.smarthome.auth.oauth2client/${project.version}</bundle>
   </feature>
 
   <feature name="esh-automation-api" version="${project.version}">
@@ -223,6 +235,7 @@
     <feature>esh-base</feature>
     <feature dependency="true">esh-automation-api</feature>
     <feature dependency="true">esh-automation-core</feature>
+    <feature dependency="true">esh-automation-module-core</feature>
     <bundle>mvn:org.eclipse.smarthome.automation/org.eclipse.smarthome.automation.providers/${project.version}</bundle>
   </feature>
 
@@ -235,6 +248,7 @@
 
   <feature name="esh-config-serial" version="${project.version}">
     <feature>esh-base</feature>
+
     <feature>esh-io-transport-serial</feature>
     <bundle>mvn:org.eclipse.smarthome.config/org.eclipse.smarthome.config.serial/${project.version}</bundle>
   </feature>
@@ -251,19 +265,24 @@
     <bundle>mvn:org.eclipse.smarthome.io/org.eclipse.smarthome.io.console.karaf/${project.version}</bundle>
   </feature>
 
-  <feature name="esh-io-rest-auth" version="${project.version}">
+  <feature name="esh-io-http-auth" version="${project.version}">
     <feature>esh-base</feature>
-
-    <requirement>esh.tp;filter:="(feature=jax-rs-provider-security)"</requirement>
-    <feature dependency="true">esh.tp-jax-rs-provider-security</feature>
-
-    <bundle>mvn:org.eclipse.smarthome.io/org.eclipse.smarthome.io.rest.auth/${project.version}</bundle>
+    <bundle>mvn:org.eclipse.smarthome.io/org.eclipse.smarthome.io.http.auth/${project.version}</bundle>
   </feature>
 
-  <feature name="esh-io-rest-auth-basic" version="${project.version}">
+  <feature name="esh-io-http-auth-basic" version="${project.version}">
     <feature>esh-base</feature>
-    <feature>esh-io-rest-auth</feature>
-    <bundle>mvn:org.eclipse.smarthome.io/org.eclipse.smarthome.io.rest.auth.basic/${project.version}</bundle>
+    <bundle>mvn:org.eclipse.smarthome.io/org.eclipse.smarthome.io.http.auth.basic/${project.version}</bundle>
+
+    <feature>esh-io-http-auth</feature>
+    <config name="org.eclipse.smarthome.auth">
+      enabled = true
+    </config>
+  </feature>
+
+  <feature name="esh-io-rest-auth" version="${project.version}">
+    <feature>esh-base</feature>
+    <bundle>mvn:org.eclipse.smarthome.io/org.eclipse.smarthome.io.rest.auth/${project.version}</bundle>
   </feature>
 
   <feature name="esh-io-rest-log" version="${project.version}">
@@ -334,7 +353,6 @@
 
   <feature name="esh-io-transport-serial" version="${project.version}">
     <feature>esh-base</feature>
-
     <requirement>osgi.service;filter:="(objectClass=org.eclipse.smarthome.io.transport.serial.SerialPortManager)"</requirement>
     <requirement>osgi.service;filter:="(objectClass=org.eclipse.smarthome.io.transport.serial.SerialPortProvider)"</requirement>
     <feature dependency="true">esh-io-transport-serial-rxtx</feature>
@@ -386,8 +404,14 @@
     <bundle>mvn:org.eclipse.smarthome.config/org.eclipse.smarthome.config.discovery.upnp/${project.version}</bundle>
   </feature>
 
+  <feature name="esh-model-core" version="${project.version}">
+    <feature>esh-base</feature>
+    <bundle>mvn:org.eclipse.smarthome.model/org.eclipse.smarthome.model.core/${project.version}</bundle>
+  </feature>
+
   <feature name="esh-model-item" version="${project.version}">
     <feature>esh-base</feature>
+    <feature>esh-model-core</feature>
     <bundle>mvn:org.eclipse.smarthome.model/org.eclipse.smarthome.model.item/${project.version}</bundle>
   </feature>
 
@@ -473,6 +497,7 @@
 
   <feature name="esh-model-sitemap" version="${project.version}">
     <feature>esh-base</feature>
+    <feature>esh-model-core</feature>
     <bundle>mvn:org.eclipse.smarthome.model/org.eclipse.smarthome.model.sitemap/${project.version}</bundle>
   </feature>
 
@@ -514,10 +539,10 @@
 
   <feature name="esh-model-lsp" version="${project.version}">
 
-    <requirement>esh.tp;filter:="(&amp;(feature=xtext-ide)(version&gt;=2.12.0)(!(version&gt;=2.13.0)))"</requirement>
+    <requirement>esh.tp;filter:="(&amp;(feature=xtext-ide)(version&gt;=2.14.0)(!(version&gt;=2.15.0)))"</requirement>
     <feature dependency="true">esh.tp-xtext-ide</feature>
 
-    <requirement>esh.tp;filter:="(&amp;(feature=lsp4j)(version&gt;=0.2.0)(!(version&gt;=0.3.0)))"</requirement>
+    <requirement>esh.tp;filter:="(&amp;(feature=lsp4j)(version&gt;=0.4.0)(!(version&gt;=0.5.0)))"</requirement>
     <feature dependency="true">esh.tp-lsp4j</feature>
 
     <feature>esh-model-item-ide</feature>

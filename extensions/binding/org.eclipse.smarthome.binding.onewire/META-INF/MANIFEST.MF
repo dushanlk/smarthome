@@ -4,7 +4,7 @@ Bundle-ManifestVersion: 2
 Bundle-Name: Eclipse SmartHome OneWire Binding
 Bundle-SymbolicName: org.eclipse.smarthome.binding.onewire;singleton:=true
 Bundle-Vendor: Eclipse.org/SmartHome
-Bundle-Version: 0.10.0.qualifier
+Bundle-Version: 0.11.0.qualifier
 Bundle-RequiredExecutionEnvironment: JavaSE-1.8
 Bundle-ClassPath: .
 Import-Package: javax.measure.quantity,
@@ -19,6 +19,8 @@ Import-Package: javax.measure.quantity,
  org.eclipse.smarthome.core.thing.binding.builder,
  org.eclipse.smarthome.core.thing.type,
  org.eclipse.smarthome.core.types,
+ org.eclipse.smarthome.core.util,
  org.osgi.framework,
  org.slf4j
 Service-Component: OSGI-INF/*.xml
+Automatic-Module-Name: org.eclipse.smarthome.binding.onewire

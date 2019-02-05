@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -81,7 +81,8 @@ public class ItemStateConverterImpl implements ItemStateConverter {
 
                 Class<? extends Quantity<?>> dimension = numberItem.getDimension();
                 @SuppressWarnings({ "unchecked", "rawtypes" })
-                Unit<? extends Quantity<?>> conversionUnit = unitProvider.getUnit((Class<Quantity>) dimension);
+                // explicit cast to Class<? extends Quantity> as JDK compiler complains
+                Unit<? extends Quantity<?>> conversionUnit = unitProvider.getUnit((Class<? extends Quantity>) dimension);
                 if (conversionUnit != null
                         && UnitUtils.isDifferentMeasurementSystem(conversionUnit, quantityState.getUnit())) {
                     return convertOrUndef(quantityState, conversionUnit);

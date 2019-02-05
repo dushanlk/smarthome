@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -78,7 +78,7 @@ public class OnTimeAutomaticVirtualDatapointHandler extends AbstractVirtualDatap
             HmDatapoint dpOnTime = channel
                     .getDatapoint(HmDatapointInfo.createValuesInfo(channel, DATAPOINT_NAME_ON_TIME));
             if (dpOnTime != null) {
-                gateway.sendDatapoint(dpOnTime, new HmDatapointConfig(), getVirtualDatapointValue(channel));
+                gateway.sendDatapoint(dpOnTime, new HmDatapointConfig(), getVirtualDatapointValue(channel), null);
             } else {
                 logger.warn(
                         "Can't find ON_TIME datapoint in channel '{}' in device '{}', ignoring virtual datapoint '{}'",

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,9 +25,11 @@ import java.util.Map;
 import org.eclipse.smarthome.core.thing.ThingTypeUID;
 import org.eclipse.smarthome.core.thing.binding.ThingTypeProvider;
 import org.eclipse.smarthome.core.thing.type.ChannelDefinition;
+import org.eclipse.smarthome.core.thing.type.ChannelDefinitionBuilder;
 import org.eclipse.smarthome.core.thing.type.ChannelGroupDefinition;
 import org.eclipse.smarthome.core.thing.type.ThingType;
 import org.eclipse.smarthome.core.thing.type.ThingTypeBuilder;
+import org.osgi.service.component.annotations.Component;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,6 +39,7 @@ import org.slf4j.LoggerFactory;
  *         ThingType Description
  *
  */
+@Component
 public class TestHueThingTypeProvider implements ThingTypeProvider {
 
     private final Logger logger = LoggerFactory.getLogger(TestHueThingTypeProvider.class);
@@ -49,10 +52,11 @@ public class TestHueThingTypeProvider implements ThingTypeProvider {
                     ThingTypeBuilder.instance(TestHueThingHandlerFactory.THING_TYPE_BRIDGE, "HueBridge")
                             .withDescription("HueBridge").isListed(false).buildBridge());
 
-            ChannelDefinition color = new ChannelDefinition("color", TestHueChannelTypeProvider.COLOR_CHANNEL_TYPE_UID);
+            ChannelDefinition color = new ChannelDefinitionBuilder("color",
+                    TestHueChannelTypeProvider.COLOR_CHANNEL_TYPE_UID).build();
 
-            ChannelDefinition colorTemp = new ChannelDefinition("color_temperature",
-                    TestHueChannelTypeProvider.COLOR_TEMP_CHANNEL_TYPE_UID);
+            ChannelDefinition colorTemp = new ChannelDefinitionBuilder("color_temperature",
+                    TestHueChannelTypeProvider.COLOR_TEMP_CHANNEL_TYPE_UID).build();
             thingTypes.put(TestHueThingHandlerFactory.THING_TYPE_LCT001, ThingTypeBuilder
                     .instance(TestHueThingHandlerFactory.THING_TYPE_LCT001, "LCT001")
                     .withSupportedBridgeTypeUIDs(Arrays.asList(TestHueThingHandlerFactory.THING_TYPE_BRIDGE.toString()))
@@ -63,11 +67,11 @@ public class TestHueThingTypeProvider implements ThingTypeProvider {
                     ThingTypeBuilder.instance(TestHueThingHandlerFactoryX.THING_TYPE_BRIDGE, "HueBridge")
                             .withDescription("HueBridge").isListed(false).buildBridge());
 
-            ChannelDefinition colorX = new ChannelDefinition("Xcolor",
-                    TestHueChannelTypeProvider.COLORX_CHANNEL_TYPE_UID);
+            ChannelDefinition colorX = new ChannelDefinitionBuilder("Xcolor",
+                    TestHueChannelTypeProvider.COLORX_CHANNEL_TYPE_UID).build();
 
-            ChannelDefinition colorTempX = new ChannelDefinition("Xcolor_temperature",
-                    TestHueChannelTypeProvider.COLORX_TEMP_CHANNEL_TYPE_UID);
+            ChannelDefinition colorTempX = new ChannelDefinitionBuilder("Xcolor_temperature",
+                    TestHueChannelTypeProvider.COLORX_TEMP_CHANNEL_TYPE_UID).build();
             thingTypes.put(TestHueThingHandlerFactoryX.THING_TYPE_LCT001,
                     ThingTypeBuilder.instance(TestHueThingHandlerFactoryX.THING_TYPE_LCT001, "XLCT001")
                             .withSupportedBridgeTypeUIDs(

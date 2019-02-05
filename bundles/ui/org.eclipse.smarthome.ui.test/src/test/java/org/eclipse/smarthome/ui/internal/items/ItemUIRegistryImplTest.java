@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,8 +21,6 @@ import java.text.DecimalFormatSymbols;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.measure.Unit;
-
 import org.eclipse.emf.common.util.BasicEList;
 import org.eclipse.smarthome.core.i18n.UnitProvider;
 import org.eclipse.smarthome.core.items.Item;
@@ -36,8 +34,6 @@ import org.eclipse.smarthome.core.library.types.OnOffType;
 import org.eclipse.smarthome.core.library.types.PercentType;
 import org.eclipse.smarthome.core.library.types.QuantityType;
 import org.eclipse.smarthome.core.library.types.StringType;
-import org.eclipse.smarthome.core.library.unit.ImperialUnits;
-import org.eclipse.smarthome.core.library.unit.SIUnits;
 import org.eclipse.smarthome.core.types.State;
 import org.eclipse.smarthome.core.types.StateDescription;
 import org.eclipse.smarthome.core.types.StateOption;
@@ -81,12 +77,6 @@ public class ItemUIRegistryImplTest {
 
         when(widget.getItem()).thenReturn("Item");
         when(registry.getItem("Item")).thenReturn(item);
-
-        // only used to initialise unit conversions && formatter
-        @SuppressWarnings("unused")
-        Unit<?> celsius = SIUnits.CELSIUS;
-        @SuppressWarnings("unused")
-        Unit<?> fahrenheit = ImperialUnits.FAHRENHEIT;
     }
 
     @Test

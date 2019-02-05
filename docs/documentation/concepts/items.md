@@ -16,7 +16,7 @@ The following Item types are currently available (alphabetical order):
 | Item Name          | Description | Command Types |
 |--------------------|-------------|---------------|
 | Color              | Color information (RGB) | OnOff, IncreaseDecrease, Percent, HSB |
-| Contact            | Item storing status of e.g. door/window contacts | OpenClose |
+| Contact            | Item storing status of e.g. door/window contacts | OpenClosed |
 | DateTime           | Stores date and time | - |
 | Dimmer             | Item carrying a percentage value for dimmers | OnOff, IncreaseDecrease, Percent |
 | Group              | Item to nest other Items / collect them in Groups | - |
@@ -54,12 +54,11 @@ Available Group functions:
 
 | Function           | Parameters                    | Base Item                                   | Description                                                                                                                                      |
 |--------------------|-------------------------------|---------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------|
-| EQUALITY           | -                             | \<all\>                                     | Sets the state of the members if all have equal state. Otherwise UNDEF is set.                                                                   |
+| EQUALITY           | -                             | \<all\>                                     | Sets the state of the members if all have equal state. Otherwise UNDEF is set. In the Item DSL `EQUALITY` is the default and may be omitted.     |
 | AND, OR, NAND, NOR | <activeState>, <passiveState> | \<all\> (must match active & passive state) | Sets the \<activeState\>, if the member state \<activeState\> evaluates to `true` under the boolean term. Otherwise the \<passiveState\> is set. |
 | SUM, AVG, MIN, MAX | -                             | Number                                      | Sets the state according to the arithmetic function over all member states.                                                                      |
 | COUNT              | <regular expression>          | Number                                      | Sets the state to the number of members matching the given regular expression with their states.                                                 |
 | LATEST, EARLIEST   | -                             | DateTime                                    | Sets the state to the latest/earliest date from all member states                                                                                |
-
 
 Examples for derived states on Group Items when declared in the Item DSL:
 
@@ -141,15 +140,15 @@ Here is a short table demonstrating conversions for the examples above:
 ## Item Metadata
 
 Sometimes additional information is required to be attached to Items for certain use-cases. 
-This could be e.g. an application which needs some hints in order to render the Items in a generic way or an integration with voice controlled assistants or any other services which access the Items and need to understand their "meaning".
+This could be an application which needs some hints in order to render the Items in a generic way, or an integration with voice controlled assistants, or any other services which access the Items and need to understand their "meaning".
 
-For this purpose, such meta-information can be attached to Items using disjunct namespaces so they won't conflict with each other. 
+Such metadata can be attached to Items using disjunct namespaces so they won't conflict with each other. 
 Each metadata entry has a main value and optionally additional key/value pairs. 
 There can be metadata attached to an Item for as many namespaces as desired, like in the following example: 
 
     Switch "My Fan" { homekit="Fan.v2", alexa="Fan" [ type="oscillating", speedSteps=3 ] }
 
-The metadata can alternatively maintained via a dedicated REST endpoint and is included in the `EnrichedItemDTO` responses.
+The metadata can be maintained via a dedicated REST endpoint and is included in the `EnrichedItemDTO` responses.
 
 Extensions which can infer some metadata automatically need to implement and register a `MetadataProvider` service in order to make them available to the system. 
 They may provision them from any source they like and also dynamically remove or add data. 

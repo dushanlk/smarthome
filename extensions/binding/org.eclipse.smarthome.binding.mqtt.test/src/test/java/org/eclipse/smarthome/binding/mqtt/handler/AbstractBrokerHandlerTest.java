@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,10 +14,13 @@ package org.eclipse.smarthome.binding.mqtt.handler;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.*;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import java.util.Collections;
+
 import org.eclipse.smarthome.binding.mqtt.internal.MqttThingID;
+import org.eclipse.smarthome.config.core.Configuration;
 import org.eclipse.smarthome.core.thing.Bridge;
 import org.eclipse.smarthome.core.thing.binding.ThingHandlerCallback;
 import org.eclipse.smarthome.io.transport.mqtt.MqttBrokerConnection;
@@ -39,6 +42,7 @@ public class AbstractBrokerHandlerTest {
     private final String HOST = "tcp://123.1.2.3";
     private final int PORT = 80;
     private SystemBrokerHandler handler;
+    int stateChangeCounter = 0;
 
     @Mock
     private ThingHandlerCallback callback;
@@ -53,9 +57,12 @@ public class AbstractBrokerHandlerTest {
     public void setUp() {
         MockitoAnnotations.initMocks(this);
         doReturn(MqttThingID.getThingUID(HOST, PORT)).when(thing).getUID();
+        doReturn(new Configuration(Collections.singletonMap("brokerid", MqttThingID.getThingUID(HOST, PORT).getId())))
+                .when(thing).getConfiguration();
         handler = new SystemBrokerHandler(thing, service);
         handler.setCallback(callback);
-        assertThat(handler.brokerID, is(MqttThingID.getThingID(HOST, PORT)));
+        assertThat(handler.getThing().getConfiguration().get("brokerid"), is(MqttThingID.getThingID(HOST, PORT)));
+        stateChangeCounter = 0;
     }
 
     @Test
@@ -82,12 +89,16 @@ public class AbstractBrokerHandlerTest {
     public void brokerAdded() throws ConfigurationException, MqttException {
         MqttBrokerConnectionEx connection = spy(
                 new MqttBrokerConnectionEx("10.10.0.10", 80, false, "BrokerHandlerTest"));
+        doReturn(connection).when(service).getBrokerConnection(eq(handler.brokerID));
+
+        verify(callback, times(0)).statusUpdated(any(), any());
         handler.brokerAdded(handler.brokerID, connection);
+
         assertThat(handler.connection, is(connection));
 
         verify(connection).start();
 
-        // First connecting then connected
-        verify(callback, times(2)).statusUpdated(any(), any());
+        // First connecting then connected and another connected after the future completes
+        verify(callback, times(3)).statusUpdated(any(), any());
     }
 }
