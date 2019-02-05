@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,7 +14,7 @@ package org.eclipse.smarthome.binding.mqtt.generic.internal.convention.homie300;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.smarthome.binding.mqtt.generic.internal.convention.homie300.DeviceAttributes.ReadyState;
-import org.eclipse.smarthome.binding.mqtt.generic.internal.generic.ChannelStateUpdateListener;
+import org.eclipse.smarthome.binding.mqtt.generic.internal.mapping.MqttAttributeClass;
 
 /**
  * Callbacks to inform about the Homie Device state, statistics changes, node layout changes.
@@ -23,7 +23,7 @@ import org.eclipse.smarthome.binding.mqtt.generic.internal.generic.ChannelStateU
  * @author David Graeff - Initial contribution
  */
 @NonNullByDefault
-public interface DeviceCallback extends ChannelStateUpdateListener {
+public interface DeviceCallback {
     /**
      * Called whenever the device state changed
      *
@@ -32,30 +32,28 @@ public interface DeviceCallback extends ChannelStateUpdateListener {
     void readyStateChanged(ReadyState state);
 
     /**
-     * Called, whenever a Homie node was existing before, but is not anymore.
+     * Called whenever the statistics properties changed
      *
-     * @param node The affected node class.
+     * @param stats The new statistics
      */
-    void nodeRemoved(Node node);
+    void statisticAttributesChanged(DeviceStatsAttributes stats);
 
     /**
-     * Called, whenever a Homie property was existing before, but is not anymore.
+     * Called once for nodes and for each node property as well after the device has been started via
+     * {@link Device#startDiscovery(DeviceCallback)}.
      *
-     * @param node The affected property class.
+     * Called subsequently,if the device "removes" or adds nodes or node properties.
+     *
+     * Is is safe to call{@link Device#collectAllProperties()} for a list of all properties within this callback
+     * if {@link Device#isInitializing()} is false.
+     *
      */
-    void propertyRemoved(Property property);
+    void propertiesChanged();
 
     /**
-     * Called, whenever a Homie node was added or changed.
+     * Called, whenever a Homie node or property was existing before, but is not anymore.
      *
-     * @param node The affected node class.
+     * @param attributeClass The affected attribute class.
      */
-    void nodeAddedOrChanged(Node node);
-
-    /**
-     * Called, whenever a Homie property was added or changed.
-     *
-     * @param node The affected property class.
-     */
-    void propertyAddedOrChanged(Property property);
+    void subNodeRemoved(MqttAttributeClass attributeClass);
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,7 +14,6 @@ package org.eclipse.smarthome.binding.homematic.internal.discovery;
 
 import static org.eclipse.smarthome.binding.homematic.HomematicBindingConstants.BINDING_ID;
 
-import java.util.Collections;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
@@ -33,6 +32,8 @@ import org.eclipse.smarthome.core.thing.ThingUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableSet;
+
 /**
  * The {@link HomematicDeviceDiscoveryService} is used to discover devices that are connected to a Homematic gateway.
  *
@@ -49,7 +50,7 @@ public class HomematicDeviceDiscoveryService extends AbstractDiscoveryService {
     private volatile int installModeDuration = HomematicConfig.DEFAULT_INSTALL_MODE_DURATION;
 
     public HomematicDeviceDiscoveryService(HomematicBridgeHandler bridgeHandler) {
-        super(Collections.singleton(new ThingTypeUID(BINDING_ID, "-")), DISCOVER_TIMEOUT_SECONDS, false);
+        super(ImmutableSet.of(new ThingTypeUID(BINDING_ID, "-")), DISCOVER_TIMEOUT_SECONDS, false);
         this.bridgeHandler = bridgeHandler;
     }
 

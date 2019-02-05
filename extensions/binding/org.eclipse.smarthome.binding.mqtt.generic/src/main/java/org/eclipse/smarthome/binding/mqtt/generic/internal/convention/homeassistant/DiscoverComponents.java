@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,7 +12,10 @@
  */
 package org.eclipse.smarthome.binding.mqtt.generic.internal.convention.homeassistant;
 
-import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -20,58 +23,33 @@ import java.util.concurrent.TimeUnit;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
-import org.eclipse.smarthome.binding.mqtt.generic.internal.generic.ChannelStateUpdateListener;
+import org.eclipse.smarthome.binding.mqtt.generic.internal.ChannelStateUpdateListener;
+import org.eclipse.smarthome.binding.mqtt.generic.internal.MqttChannelTypeProvider;
+import org.eclipse.smarthome.core.thing.Channel;
 import org.eclipse.smarthome.core.thing.ThingUID;
 import org.eclipse.smarthome.io.transport.mqtt.MqttBrokerConnection;
 import org.eclipse.smarthome.io.transport.mqtt.MqttMessageSubscriber;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.gson.Gson;
-
 /**
- * Responsible for subscribing to the HomeAssistant MQTT components wildcard topic, either
- * in a time limited discovery mode or as a background discovery.
+ * Responsible for subscribing to the HomeAssistant MQTT components wildcard topic
  *
  * @author David Graeff - Initial contribution
  */
 @NonNullByDefault
 public class DiscoverComponents implements MqttMessageSubscriber {
     private final Logger logger = LoggerFactory.getLogger(DiscoverComponents.class);
+    private final Map<String, AbstractComponent> haComponentsDiscoverProcess = new HashMap<String, AbstractComponent>();
     private final ThingUID thingUID;
+    protected @Nullable String configTopic;
     private final ScheduledExecutorService scheduler;
-    private final @Nullable ChannelStateUpdateListener updateListener;
+    private @Nullable ScheduledFuture<?> scheduledFuture;
+    protected final CompletableFuture<Boolean> discoverFinishedFuture = new CompletableFuture<>();
 
-    protected final CompletableFuture<@Nullable Void> discoverFinishedFuture = new CompletableFuture<>();
-    private final Gson gson;
-
-    private @Nullable ScheduledFuture<?> stopDiscoveryFuture;
-    private WeakReference<@Nullable MqttBrokerConnection> connectionRef = new WeakReference<>(null);
-    protected @NonNullByDefault({}) ComponentDiscovered discoveredListener;
-    private int discoverTime;
-    private String topicWithNode = "";
-    private String topic = "";
-
-    /**
-     * Implement this to get notified of new components
-     */
-    public static interface ComponentDiscovered {
-        void componentDiscovered(HaID homeAssistantTopicID, AbstractComponent component);
-    }
-
-    /**
-     * Create a new discovery object.
-     *
-     * @param thingUID The Thing UID to perform the discovery for.
-     * @param scheduler A scheduler for timeouts
-     * @param channelStateUpdateListener Channel update listener. Usually the handler.
-     */
-    public DiscoverComponents(ThingUID thingUID, ScheduledExecutorService scheduler,
-            @Nullable ChannelStateUpdateListener channelStateUpdateListener, Gson gson) {
+    public DiscoverComponents(ThingUID thingUID, ScheduledExecutorService scheduler) {
         this.thingUID = thingUID;
         this.scheduler = scheduler;
-        this.updateListener = channelStateUpdateListener;
-        this.gson = gson;
     }
 
     @Override
@@ -79,83 +57,52 @@ public class DiscoverComponents implements MqttMessageSubscriber {
         if (!topic.endsWith("/config")) {
             return;
         }
-        HaID haID = new HaID(topic);
-        String config = new String(payload);
-        AbstractComponent component = CFactory.createComponent(thingUID, haID, config, updateListener, gson);
+        TopicToID topicParts = new TopicToID(topic);
+        if (haComponentsDiscoverProcess.containsKey(topicParts.component)) {
+            return;
+        }
+        logger.trace("Added thing {} component {}", topicParts.objectID, topicParts.component);
+        AbstractComponent component = CFactory.createComponent(thingUID, topicParts.component, new String(payload));
         if (component != null) {
-            logger.trace("Found HomeAssistant thing {} component {}", haID.objectID, haID.component);
-            if (discoveredListener != null) {
-                discoveredListener.componentDiscovered(haID, component);
-            }
-        } else {
-            logger.debug("Configuration of HomeAssistant thing {} invalid: {}", haID.objectID, config);
+            haComponentsDiscoverProcess.put(topicParts.component, component);
         }
     }
 
     /**
-     * Start a components discovery.
-     *
-     * <p>
-     * We need to consider the case that the remote client is using node IDs
-     * and also the case that no node IDs are used.
-     * </p>
+     * Start a components discovery. You need to have set the wildcard MQTT topic before with
+     * {@link #setDiscoveryTopic(String, String, String)}.
      *
      * @param connection A MQTT broker connection
-     * @param discoverTime The time in milliseconds for the discovery to run. Can be 0 to disable the timeout.
-     *            You need to call {@link #stopDiscovery(MqttBrokerConnection)} at some point in that case.
-     * @param topicDescription Contains the object-id (=device id) and potentially a node-id as well.
-     * @param componentsDiscoveredListener Listener for results
+     * @param discoverTime The time in milliseconds for the discovery to run
      * @return A future that completes normally after the given time in milliseconds or exceptionally on any error.
-     *         Completes immediately if the timeout is disabled.
      */
-    public CompletableFuture<@Nullable Void> startDiscovery(MqttBrokerConnection connection, int discoverTime,
-            HaID topicDescription, ComponentDiscovered componentsDiscoveredListener) {
+    public CompletableFuture<Boolean> startDiscovery(MqttBrokerConnection connection, int discoverTime) {
+        haComponentsDiscoverProcess.clear();
+        String configTopic = this.configTopic;
+        if (configTopic == null) {
+            CompletableFuture<Boolean> future = new CompletableFuture<>();
+            future.completeExceptionally(new IllegalArgumentException("No configuration topic set"));
+            return future;
+        }
 
-        this.topicWithNode = topicDescription.baseTopic + "/+/+/" + topicDescription.objectID + "/config";
-        this.topic = topicDescription.baseTopic + "/+/" + topicDescription.objectID + "/config";
-        this.discoverTime = discoverTime;
-        this.discoveredListener = componentsDiscoveredListener;
-        this.connectionRef = new WeakReference<>(connection);
+        // Subscribe to the wildcard topic and start receive MQTT retained topics
+        connection.subscribe(configTopic, this).exceptionally(e -> {
+            final ScheduledFuture<?> scheduledFuture = this.scheduledFuture;
+            if (scheduledFuture != null) { // Cancel timeout
+                scheduledFuture.cancel(false);
+                this.scheduledFuture = null;
+            }
+            discoverFinishedFuture.completeExceptionally(e);
+            return false;
+        });
 
-        // Subscribe to the wildcard topics and start receive MQTT retained topics
-        CompletableFuture.allOf(connection.subscribe(topic, this), connection.subscribe(topicWithNode, this))
-                .thenRun(this::subscribeSuccess).exceptionally(this::subscribeFail);
-
-        return discoverFinishedFuture;
-    }
-
-    private void subscribeSuccess() {
-        final MqttBrokerConnection connection = connectionRef.get();
         // Set up a scheduled future that will stop the discovery after the given time
-        if (connection != null && discoverTime > 0) {
-            this.stopDiscoveryFuture = scheduler.schedule(() -> {
-                this.stopDiscoveryFuture = null;
-                connection.unsubscribe(topicWithNode, this);
-                connection.unsubscribe(topic, this);
-                this.discoveredListener = null;
-                discoverFinishedFuture.complete(null);
-            }, discoverTime, TimeUnit.MILLISECONDS);
-        } else {
-            // No timeout -> complete immediately
-            discoverFinishedFuture.complete(null);
-        }
-    }
-
-    private @Nullable Void subscribeFail(Throwable e) {
-        final ScheduledFuture<?> scheduledFuture = this.stopDiscoveryFuture;
-        if (scheduledFuture != null) { // Cancel timeout
-            scheduledFuture.cancel(false);
-            this.stopDiscoveryFuture = null;
-        }
-        this.discoveredListener = null;
-        final MqttBrokerConnection connection = connectionRef.get();
-        if (connection != null) {
-            connection.unsubscribe(topicWithNode, this);
-            connection.unsubscribe(topic, this);
-            connectionRef.clear();
-        }
-        discoverFinishedFuture.completeExceptionally(e);
-        return null;
+        this.scheduledFuture = scheduler.schedule(() -> {
+            this.scheduledFuture = null;
+            connection.unsubscribe(configTopic, this);
+            discoverFinishedFuture.complete(true);
+        }, discoverTime, TimeUnit.MILLISECONDS);
+        return discoverFinishedFuture;
     }
 
     /**
@@ -163,7 +110,84 @@ public class DiscoverComponents implements MqttMessageSubscriber {
      *
      * @param connection A MQTT broker connection
      */
-    public void stopDiscovery() {
-        subscribeFail(new Throwable("Stopped"));
+    public void stopDiscovery(MqttBrokerConnection connection) {
+        String configTopic = this.configTopic;
+        final ScheduledFuture<?> scheduledFuture = this.scheduledFuture;
+        if (configTopic == null || scheduledFuture == null) {
+            return;
+        }
+        scheduledFuture.cancel(false);
+        connection.unsubscribe(configTopic, this);
     }
+
+    /**
+     * Clear discovery results.
+     */
+    public void clearResults() {
+        haComponentsDiscoverProcess.clear();
+    }
+
+    /**
+     * Clear the components of the given map and apply the newly discovered ones.
+     *
+     * Remove the old components from the channel type provider and apply the new components
+     * and component channels to it.
+     *
+     * @param haComponents The destination map of HA MQTT components
+     * @param channelTypeProvider A channel type provider
+     * @return A list of discovered ESH channels
+     */
+    public List<Channel> applyDiscoveryResult(Map<String, AbstractComponent> haComponents,
+            MqttChannelTypeProvider channelTypeProvider) {
+        // Remove channel types of the current components discovery
+        haComponents.values().stream().forEach(e -> {
+            channelTypeProvider.removeChannelGroupType(e.groupTypeUID());
+            for (CChannel entry : e.channelTypes().values()) {
+                channelTypeProvider.removeChannelType(entry.channelTypeUID);
+            }
+        });
+        haComponents.clear();
+        haComponents.putAll(haComponentsDiscoverProcess);
+        // Add channel types of the new components discovery
+        List<Channel> channels = new ArrayList<>();
+        haComponents.values().stream().forEach(e -> {
+            channelTypeProvider.addChannelGroupType(e.groupTypeUID(), e.name());
+            for (CChannel entry : e.channelTypes().values()) {
+                channelTypeProvider.addChannelType(entry.channelTypeUID, entry.type);
+                channels.add(entry.channel);
+            }
+        });
+        return channels;
+    }
+
+    /**
+     * Subscribe to all component channel state topics.
+     *
+     * @param haComponents HomeAssistant MQTT components
+     * @param connection A MQTT broker connection
+     * @param channelStateUpdateListener State update listener
+     * @return
+     */
+    public static CompletableFuture<Boolean> startComponents(Map<String, AbstractComponent> haComponents,
+            MqttBrokerConnection connection, ChannelStateUpdateListener channelStateUpdateListener) {
+        return haComponents.values().stream().map(e -> e.start(connection, channelStateUpdateListener))
+                .reduce(CompletableFuture.completedFuture(true), (a, v) -> a.thenCompose(b -> v));
+    }
+
+    /**
+     * Setup the MQTT discovery wildcard topic.
+     *
+     * @param baseTopic The base topic. Usually "homeassistant".
+     * @param objectID The object id (=device id)
+     * @param nodeID The node id. Can be empty.
+     */
+    public void setDiscoveryTopic(String baseTopic, String objectID, @Nullable String nodeID) {
+        if (nodeID == null || nodeID.isEmpty()) {
+            configTopic = baseTopic + "/+/" + objectID + "/config";
+        } else {
+            configTopic = baseTopic + "/+/" + nodeID + "/" + objectID + "/config";
+        }
+
+    }
+
 }

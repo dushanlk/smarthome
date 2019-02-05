@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,9 +13,9 @@
 package org.eclipse.smarthome.io.net.http;
 
 /**
- * This exception is thrown, if an unexpected error occurs during initialization of the Jetty client
- *
- * @author Michael Bock - Initial contribution
+ * This exception is thrown, if an unexpected error occurs during initialization of the jetty client
+ * 
+ * @author Michael Bock - initial API
  */
 public class HttpClientInitializationException extends RuntimeException {
 

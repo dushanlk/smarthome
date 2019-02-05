@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,7 +21,6 @@ import java.math.BigDecimal;
 import javax.measure.quantity.Dimensionless;
 import javax.measure.quantity.Energy;
 import javax.measure.quantity.Length;
-import javax.measure.quantity.Pressure;
 import javax.measure.quantity.Temperature;
 
 import org.eclipse.smarthome.core.library.dimension.Density;
@@ -272,12 +271,5 @@ public class QuantityTypeTest {
         QuantityType<Energy> energy = new QuantityType<>("28800 J");
         assertEquals("0.008 kWh", energy.toUnit("kWh").toString());
         assertEquals("28800 Ws", energy.toUnit("Ws").toString());
-    }
-
-    @Test
-    public void testPressureUnits() {
-        QuantityType<Pressure> pressure = new QuantityType<>("1013 mbar");
-        assertEquals("1.013 bar", pressure.toUnit("bar").toString());
-        assertEquals("101300 Pa", pressure.toUnit("Pa").toString());
     }
 }

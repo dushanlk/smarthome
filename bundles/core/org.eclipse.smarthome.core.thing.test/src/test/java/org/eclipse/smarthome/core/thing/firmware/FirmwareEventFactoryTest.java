@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,7 +16,6 @@ import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.collection.IsIterableContainingInAnyOrder.containsInAnyOrder;
 import static org.junit.Assert.assertThat;
 
-import java.util.Arrays;
 import java.util.Set;
 
 import org.eclipse.smarthome.core.events.Event;
@@ -26,6 +25,8 @@ import org.eclipse.smarthome.core.thing.binding.firmware.ProgressStep;
 import org.eclipse.smarthome.test.java.JavaTest;
 import org.junit.Before;
 import org.junit.Test;
+
+import com.google.common.collect.Lists;
 
 /**
  *
@@ -96,7 +97,7 @@ public class FirmwareEventFactoryTest extends JavaTest {
     public void testSerializationAndDeserializationFirmwareUpdateProgressInfo() throws Exception {
         FirmwareUpdateProgressInfo firmwareUpdateProgressInfo = FirmwareUpdateProgressInfo
                 .createFirmwareUpdateProgressInfo(thingUID, "1.2.3", ProgressStep.UPDATING,
-                        Arrays.asList(ProgressStep.WAITING, ProgressStep.UPDATING), false, 10);
+                        Lists.newArrayList(ProgressStep.WAITING, ProgressStep.UPDATING), false, 10);
         FirmwareUpdateProgressInfoEvent progressInfoEvent = FirmwareEventFactory
                 .createFirmwareUpdateProgressInfoEvent(firmwareUpdateProgressInfo);
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -40,7 +40,7 @@ import org.osgi.service.component.annotations.Reference;
 public class ConsoleOAuthCommandExtension extends AbstractConsoleCommandExtension implements ConsoleCommandExtension {
 
     public ConsoleOAuthCommandExtension() {
-        super("oauth", "Test of oauth client with console. Available test agent: {Code, ResourceOwner}.\n"
+        super("oauth", "Test of oauth client with console.  Available test agent: {Code, ResourceOwner}.\n"
                 + "The commands in oauth requires oauth provider data to be inputted in configuration admin.");
     }
 
@@ -67,8 +67,8 @@ public class ConsoleOAuthCommandExtension extends AbstractConsoleCommandExtensio
         try {
             switch (args[1]) {
                 case "create":
-                    OAuthClientService newService = agent.testCreateClient();
-                    console.println("handle: " + agent.handle + ", service: " + newService);
+                    String handle = agent.testCreateClient();
+                    console.println("handle: " + handle);
                     break;
                 case "getAccessTokenByResourceOwnerPassword":
                     response = agent.testGetAccessTokenByResourceOwnerPasswordCredentials();

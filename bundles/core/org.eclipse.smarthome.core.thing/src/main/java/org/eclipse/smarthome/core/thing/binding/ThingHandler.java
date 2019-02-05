@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,8 +12,6 @@
  */
 package org.eclipse.smarthome.core.thing.binding;
 
-import java.util.Collection;
-import java.util.Collections;
 import java.util.Map;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
@@ -40,7 +38,6 @@ import org.eclipse.smarthome.core.types.State;
  * @author Michael Grammling - Added dynamic configuration update
  * @author Thomas Höfer - Added config description validation exception to handleConfigurationUpdate operation
  * @author Stefan Bußweiler - API changes due to bridge/thing life cycle refactoring
- * @author Stefan Triller - added getServices method
  */
 @NonNullByDefault
 public interface ThingHandler {
@@ -83,7 +80,7 @@ public interface ThingHandler {
      * <p>
      * The callback is added after the handler instance has been tracked by the framework and before
      * {@link #initialize()} is called. The callback is removed (set to null) after the handler
-     * instance is no longer tracked and after {@link #dispose()} is called.
+     * instance is no longer tracked and before {@link #dispose()} is called.
      * <p>
      *
      * @param thingHandlerCallback the callback (can be null)
@@ -186,13 +183,4 @@ public interface ThingHandler {
      * Only then it will be removed completely.
      */
     void handleRemoval();
-
-    /**
-     * This method provides a list of classes which should be registered as services by the framework
-     *
-     * @return - list of classes that will be registered as OSGi services
-     */
-    default Collection<Class<? extends ThingHandlerService>> getServices() {
-        return Collections.emptyList();
-    }
 }

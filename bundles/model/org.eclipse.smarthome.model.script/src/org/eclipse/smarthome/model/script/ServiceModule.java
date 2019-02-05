@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,10 +16,8 @@ import org.eclipse.smarthome.core.items.ItemRegistry;
 import org.eclipse.smarthome.core.thing.ThingRegistry;
 import org.eclipse.smarthome.model.core.ModelRepository;
 import org.eclipse.smarthome.model.script.engine.IActionServiceProvider;
-import org.eclipse.smarthome.model.script.engine.IThingActionsProvider;
 import org.eclipse.smarthome.model.script.engine.ScriptEngine;
 import org.eclipse.smarthome.model.script.internal.engine.ServiceTrackerActionServiceProvider;
-import org.eclipse.smarthome.model.script.internal.engine.ServiceTrackerThingActionsProvider;
 import org.eclipse.smarthome.model.script.script.Script;
 import org.eclipse.smarthome.model.script.script.impl.ScriptImpl;
 
@@ -50,7 +48,6 @@ public class ServiceModule implements Module {
         binder.bind(ScriptEngine.class).toInstance(scriptEngine);
         binder.bind(IActionServiceProvider.class)
                 .toInstance(new ServiceTrackerActionServiceProvider(scriptServiceUtil));
-        binder.bind(IThingActionsProvider.class).toInstance(new ServiceTrackerThingActionsProvider(scriptServiceUtil));
         binder.bind(Script.class).to(ScriptImpl.class);
     }
 

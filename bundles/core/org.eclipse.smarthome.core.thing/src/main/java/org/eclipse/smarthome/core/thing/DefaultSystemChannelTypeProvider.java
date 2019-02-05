@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -72,7 +72,7 @@ public class DefaultSystemChannelTypeProvider implements ChannelTypeProvider {
 
     /**
      * Low battery default system wide {@link ChannelType}. Represents a low battery warning with possible values
-     * on (low battery) and off (battery ok).
+     * on/off.
      */
     public static final ChannelType SYSTEM_CHANNEL_LOW_BATTERY = ChannelTypeBuilder
             .state(new ChannelTypeUID(BINDING_ID, "low-battery"), "Low Battery", "Switch").withCategory("Battery")

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,7 +14,7 @@ package org.eclipse.smarthome.binding.bluetooth;
 
 import java.util.concurrent.locks.ReentrantLock;
 
-import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.smarthome.binding.bluetooth.notification.BluetoothConnectionStatusNotification;
 import org.eclipse.smarthome.binding.bluetooth.notification.BluetoothScanNotification;
 import org.eclipse.smarthome.core.library.types.DecimalType;
@@ -34,22 +34,16 @@ import org.eclipse.smarthome.core.types.UnDefType;
  * used as a base implementation for more specific thing handlers.
  *
  * @author Kai Kreuzer - Initial contribution and API
+ *
  */
-@NonNullByDefault
 public class BeaconBluetoothHandler extends BaseThingHandler implements BluetoothDeviceListener {
 
-    @NonNullByDefault({} /* non-null if initialized */)
     protected BluetoothAdapter adapter;
-
-    @NonNullByDefault({} /* non-null if initialized */)
     protected BluetoothAddress address;
-
-    @NonNullByDefault({} /* non-null if initialized */)
     protected BluetoothDevice device;
-
     protected final ReentrantLock deviceLock;
 
-    public BeaconBluetoothHandler(Thing thing) {
+    public BeaconBluetoothHandler(@NonNull Thing thing) {
         super(thing);
         deviceLock = new ReentrantLock();
     }
@@ -149,7 +143,7 @@ public class BeaconBluetoothHandler extends BaseThingHandler implements Bluetoot
     }
 
     @Override
-    public void onConnectionStateChange(BluetoothConnectionStatusNotification connectionNotification) {
+    public void onConnectionStateChange(@NonNull BluetoothConnectionStatusNotification connectionNotification) {
     }
 
     @Override
@@ -157,20 +151,21 @@ public class BeaconBluetoothHandler extends BaseThingHandler implements Bluetoot
     }
 
     @Override
-    public void onCharacteristicReadComplete(BluetoothCharacteristic characteristic, BluetoothCompletionStatus status) {
+    public void onCharacteristicReadComplete(@NonNull BluetoothCharacteristic characteristic,
+            @NonNull BluetoothCompletionStatus status) {
     }
 
     @Override
-    public void onCharacteristicWriteComplete(BluetoothCharacteristic characteristic,
-            BluetoothCompletionStatus status) {
+    public void onCharacteristicWriteComplete(@NonNull BluetoothCharacteristic characteristic,
+            @NonNull BluetoothCompletionStatus status) {
     }
 
     @Override
-    public void onCharacteristicUpdate(BluetoothCharacteristic characteristic) {
+    public void onCharacteristicUpdate(@NonNull BluetoothCharacteristic characteristic) {
     }
 
     @Override
-    public void onDescriptorUpdate(BluetoothDescriptor bluetoothDescriptor) {
+    public void onDescriptorUpdate(@NonNull BluetoothDescriptor bluetoothDescriptor) {
     }
 
 }

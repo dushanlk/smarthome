@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,9 +13,7 @@
 package org.eclipse.smarthome.binding.mqtt.generic.internal.convention.homeassistant;
 
 import org.apache.commons.lang.StringUtils;
-import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
-import org.eclipse.smarthome.binding.mqtt.generic.internal.generic.ChannelStateUpdateListener;
 import org.eclipse.smarthome.binding.mqtt.generic.internal.values.OnOffValue;
 import org.eclipse.smarthome.core.thing.ThingUID;
 
@@ -26,7 +24,6 @@ import com.google.gson.Gson;
  *
  * @author David Graeff - Initial contribution
  */
-@NonNullByDefault
 public class ComponentLock extends AbstractComponent {
     public static final String switchChannelID = "lock"; // Randomly chosen channel "ID"
 
@@ -55,19 +52,20 @@ public class ComponentLock extends AbstractComponent {
 
     protected Config config = new Config();
 
-    public ComponentLock(ThingUID thing, HaID haID, String configJSON,
-            @Nullable ChannelStateUpdateListener channelStateUpdateListener, Gson gson) {
-        super(thing, haID, configJSON, gson);
-        config = gson.fromJson(configJSON, Config.class);
+    public ComponentLock(ThingUID thing, String componentID, String configJSON) {
+        super(thing, componentID);
+        config = new Gson().fromJson(configJSON, Config.class);
 
         // We do not support all HomeAssistant quirks
         if (config.optimistic && StringUtils.isNotBlank(config.state_topic)) {
             throw new UnsupportedOperationException("Component:Lock does not support forced optimistic mode");
         }
 
-        channels.put(switchChannelID,
-                new CChannel(this, switchChannelID, new OnOffValue(config.payload_lock, config.payload_unlock),
-                        config.state_topic, config.command_topic, config.name, "", channelStateUpdateListener));
+        final OnOffValue value = config.command_topic != null
+                ? new OnOffValue(config.payload_lock, config.payload_unlock, false)
+                : OnOffValue.createReceiveOnly(config.payload_lock, config.payload_unlock, false);
+        channels.put(switchChannelID, new CChannel(thing, componentID, switchChannelID, value, config.state_topic,
+                config.command_topic, config.name, ""));
     }
 
     @Override

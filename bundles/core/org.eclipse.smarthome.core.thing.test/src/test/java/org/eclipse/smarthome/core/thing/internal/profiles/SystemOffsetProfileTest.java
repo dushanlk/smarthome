@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -72,10 +72,10 @@ public class SystemOffsetProfileTest {
         State state = new DecimalType(23);
         offsetProfile.onStateUpdateFromItem(state);
 
-        ArgumentCaptor<State> capture = ArgumentCaptor.forClass(State.class);
-        verify(callback, times(1)).handleUpdate(capture.capture());
+        ArgumentCaptor<Command> capture = ArgumentCaptor.forClass(Command.class);
+        verify(callback, times(1)).handleCommand(capture.capture());
 
-        State result = capture.getValue();
+        Command result = capture.getValue();
         DecimalType decResult = (DecimalType) result;
         assertEquals(20, decResult.intValue());
     }
@@ -106,10 +106,10 @@ public class SystemOffsetProfileTest {
         State state = new QuantityType<Temperature>("23°C");
         offsetProfile.onStateUpdateFromItem(state);
 
-        ArgumentCaptor<State> capture = ArgumentCaptor.forClass(State.class);
-        verify(callback, times(1)).handleUpdate(capture.capture());
+        ArgumentCaptor<Command> capture = ArgumentCaptor.forClass(Command.class);
+        verify(callback, times(1)).handleCommand(capture.capture());
 
-        State result = capture.getValue();
+        Command result = capture.getValue();
         @SuppressWarnings("unchecked")
         QuantityType<Temperature> decResult = (QuantityType<Temperature>) result;
         assertEquals(20, decResult.intValue());

@@ -6,7 +6,7 @@
   <parent>
     <groupId>org.eclipse.smarthome.extension</groupId>
     <artifactId>pom</artifactId>
-    <version>0.11.0-SNAPSHOT</version>
+    <version>0.10.0-SNAPSHOT</version>
   </parent>
   <groupId>org.eclipse.smarthome.binding</groupId>
   <artifactId>pom</artifactId>
@@ -36,7 +36,6 @@
     <module>org.eclipse.smarthome.binding.fsinternetradio.test</module>
     <module>org.eclipse.smarthome.binding.lifx</module>
     <module>org.eclipse.smarthome.binding.lirc</module>
-    <module>org.eclipse.smarthome.binding.meteoblue</module>
     <module>org.eclipse.smarthome.binding.mqtt</module>
     <module>org.eclipse.smarthome.binding.mqtt.test</module>
     <module>org.eclipse.smarthome.binding.mqtt.generic</module>
@@ -45,15 +44,14 @@
     <module>org.eclipse.smarthome.binding.ntp.test</module>
     <module>org.eclipse.smarthome.binding.onewire</module>
     <module>org.eclipse.smarthome.binding.onewire.test</module>
-    <module>org.eclipse.smarthome.binding.openweathermap</module>
     <module>org.eclipse.smarthome.binding.serialbutton</module>
     <module>org.eclipse.smarthome.binding.sonos</module>
-    <module>org.eclipse.smarthome.binding.sonyaudio</module>
     <module>org.eclipse.smarthome.binding.tradfri</module>
     <module>org.eclipse.smarthome.binding.tradfri.test</module>
     <module>org.eclipse.smarthome.binding.weatherunderground</module>
     <module>org.eclipse.smarthome.binding.wemo</module>
     <module>org.eclipse.smarthome.binding.wemo.test</module>
+    <module>org.eclipse.smarthome.binding.yahooweather</module>
   </modules>
 
 </project>

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,9 +12,6 @@
  */
 package org.eclipse.smarthome.config.discovery.inbox.events;
 
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
 import org.eclipse.smarthome.config.discovery.DiscoveryResult;
 import org.eclipse.smarthome.config.discovery.dto.DiscoveryResultDTO;
 import org.eclipse.smarthome.config.discovery.dto.DiscoveryResultDTOMapper;
@@ -22,6 +19,8 @@ import org.eclipse.smarthome.core.events.AbstractEventFactory;
 import org.eclipse.smarthome.core.events.Event;
 import org.eclipse.smarthome.core.events.EventFactory;
 import org.osgi.service.component.annotations.Component;
+
+import com.google.common.collect.Sets;
 
 /**
  * An {@link InboxEventFactory} is responsible for creating inbox event instances.
@@ -41,8 +40,7 @@ public class InboxEventFactory extends AbstractEventFactory {
      * Constructs a new InboxEventFactory.
      */
     public InboxEventFactory() {
-        super(Stream.of(InboxAddedEvent.TYPE, InboxUpdatedEvent.TYPE, InboxRemovedEvent.TYPE)
-                .collect(Collectors.toSet()));
+        super(Sets.newHashSet(InboxAddedEvent.TYPE, InboxUpdatedEvent.TYPE, InboxRemovedEvent.TYPE));
     }
 
     @Override

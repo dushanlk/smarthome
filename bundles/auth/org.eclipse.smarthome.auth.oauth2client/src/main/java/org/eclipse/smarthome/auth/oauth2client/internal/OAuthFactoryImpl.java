@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,6 +13,7 @@
 package org.eclipse.smarthome.auth.oauth2client.internal;
 
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
@@ -28,11 +29,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Implementation of {@link OAuthFactory}.
+ * Implementation of {@link OAuthManager}
  *
  * @author Michael Bock - Initial contribution
  * @author Gary Tse - ESH adaptation
- * @author Hilbrand Bouwkamp - Changed implementation of createOAuthClientService
  */
 @NonNullByDefault
 @Component
@@ -47,53 +47,41 @@ public class OAuthFactoryImpl implements OAuthFactory {
 
     private int tokenExpiresInBuffer = OAuthClientServiceImpl.DEFAULT_TOKEN_EXPIRES_IN_BUFFER_SECOND;
 
-    private final Map<String, OAuthClientService> oauthClientServiceCache = new ConcurrentHashMap<>();
+    private final Map<String, OAuthClientServiceImpl> oauthClientServiceCache = new ConcurrentHashMap<>();
 
     @Deactivate
     public void deactivate() {
         // close each service
-        for (OAuthClientService clientServiceImpl : oauthClientServiceCache.values()) {
+        for (OAuthClientServiceImpl clientServiceImpl : oauthClientServiceCache.values()) {
             clientServiceImpl.close();
         }
         oauthClientServiceCache.clear();
     }
 
     @Override
-    public OAuthClientService createOAuthClientService(String handle, String tokenUrl,
-            @Nullable String authorizationUrl, String clientId, @Nullable String clientSecret, @Nullable String scope,
-            @Nullable Boolean supportsBasicAuth) {
-        PersistedParams params = oAuthStoreHandler.loadPersistedParams(handle);
-        PersistedParams newParams = new PersistedParams(handle, tokenUrl, authorizationUrl, clientId, clientSecret,
-                scope, supportsBasicAuth, tokenExpiresInBuffer);
-        OAuthClientService clientImpl = null;
+    public String createOAuthClientService(String tokenUrl, @Nullable String authorizationUrl, String clientId,
+            @Nullable String clientSecret, @Nullable String scope, @Nullable Boolean supportsBasicAuth) {
 
-        // If parameters in storage and parameters are the same as arguments passed get the client from storage
-        if (params != null && params.equals(newParams)) {
-            clientImpl = getOAuthClientService(handle);
-        }
-        // If no client with parameters or with different parameters create or update (if parameters are different)
-        // client in storage.
-        if (clientImpl == null) {
-            clientImpl = OAuthClientServiceImpl.createInstance(handle, oAuthStoreHandler, httpClientFactory, newParams);
-            oauthClientServiceCache.put(handle, clientImpl);
-        }
-        return clientImpl;
+        String uuidHandle = UUID.randomUUID().toString();
 
+        OAuthClientServiceImpl clientImpl = OAuthClientServiceImpl.getInstance(uuidHandle, oAuthStoreHandler, tokenUrl,
+                authorizationUrl, clientId, clientSecret, scope, supportsBasicAuth, tokenExpiresInBuffer,
+                httpClientFactory);
+
+        oauthClientServiceCache.put(uuidHandle, clientImpl);
+        return uuidHandle;
     }
 
     @Override
-    @Nullable
-    public OAuthClientService getOAuthClientService(String handle) {
-        OAuthClientService clientImpl = oauthClientServiceCache.get(handle);
+    public OAuthClientService getOAuthClientService(String handle) throws OAuthException {
+        OAuthClientServiceImpl clientImpl = null;
 
+        clientImpl = oauthClientServiceCache.get(handle);
         if (clientImpl == null || clientImpl.isClosed()) {
             // This happens after reboot, or client was closed without factory knowing; create a new client
             // the store has the handle/config data
             clientImpl = OAuthClientServiceImpl.getInstance(handle, oAuthStoreHandler, tokenExpiresInBuffer,
                     httpClientFactory);
-            if (clientImpl == null) {
-                return null;
-            }
             oauthClientServiceCache.put(handle, clientImpl);
         }
         return clientImpl;
@@ -102,10 +90,9 @@ public class OAuthFactoryImpl implements OAuthFactory {
     @SuppressWarnings("null")
     @Override
     public void ungetOAuthService(String handle) {
-        OAuthClientService clientImpl = oauthClientServiceCache.get(handle);
-
+        OAuthClientServiceImpl clientImpl = oauthClientServiceCache.get(handle);
         if (clientImpl == null) {
-            logger.debug("{} handle not found. Cannot unregisterOAuthServie", handle);
+            logger.debug("{} handle not found.  Cannot unregisterOAuthServie", handle);
             return;
         }
         clientImpl.close();
@@ -114,8 +101,7 @@ public class OAuthFactoryImpl implements OAuthFactory {
 
     @Override
     public void deleteServiceAndAccessToken(String handle) {
-        OAuthClientService clientImpl = oauthClientServiceCache.get(handle);
-
+        OAuthClientServiceImpl clientImpl = oauthClientServiceCache.get(handle);
         if (clientImpl != null) {
             try {
                 clientImpl.remove();

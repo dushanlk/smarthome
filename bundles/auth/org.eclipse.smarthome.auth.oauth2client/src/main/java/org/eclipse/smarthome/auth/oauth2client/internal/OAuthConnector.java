@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -84,10 +84,10 @@ public class OAuthConnector {
      * @param scope Optional space separated list of scope (will be URL-encoded)
      *
      * @return A URL based on the authorizationEndpoint, with query parameters added.
-     * @see <a href="https://tools.ietf.org/html/rfc6749#section-4.1.1">rfc6749 section-4.1.1</a>
+     * @see https://tools.ietf.org/html/rfc6749#section-4.1.1
      */
-    public String getAuthorizationUrl(String authorizationEndpoint, String clientId, @Nullable String redirectURI,
-            @Nullable String state, @Nullable String scope) {
+    public String getAuthorizationUrl(String authorizationEndpoint, String clientId,
+            @Nullable String redirectURI, @Nullable String state, @Nullable String scope) {
         StringBuilder authorizationUrl = new StringBuilder(authorizationEndpoint);
 
         if (authorizationUrl.indexOf("?") == -1) {
@@ -119,7 +119,7 @@ public class OAuthConnector {
     /**
      * Resource Owner Password Credentials Grant
      *
-     * @see <a href="https://tools.ietf.org/html/rfc6749#section-4.3">rfc6749 section-4.3</a>
+     * @see https://tools.ietf.org/html/rfc6749#section-4.3
      *
      * @param tokenUrl URL of the oauth provider that accepts access token requests.
      * @param username The resource owner username.
@@ -155,7 +155,7 @@ public class OAuthConnector {
     /**
      * Refresh Token
      *
-     * @see <a href="https://tools.ietf.org/html/rfc6749#section-6">rfc6749 section-6</a>
+     * @see https://tools.ietf.org/html/rfc6749#section-6
      *
      * @param tokenUrl URL of the oauth provider that accepts access token requests.
      * @param refreshToken The refresh token, which can be used to obtain new access tokens using authorization grant
@@ -190,7 +190,7 @@ public class OAuthConnector {
     /**
      * Authorization Code Grant - part (E)
      *
-     * @see <a href="https://tools.ietf.org/html/rfc6749#section-4.1.3">rfc6749 section-4.1.3</a>
+     * @see https://tools.ietf.org/html/rfc6749#section-4.1.3
      *
      * @param tokenUrl URL of the oauth provider that accepts access token requests.
      * @param authorizationCode to be used to trade with the oauth provider for access token
@@ -226,7 +226,7 @@ public class OAuthConnector {
     /**
      * Client Credentials Grant
      *
-     * @see <a href="https://tools.ietf.org/html/rfc6749#section-4.4">rfc6749 section-4.4</a>
+     * @see https://tools.ietf.org/html/rfc6749#section-4.4
      *
      * @param tokenUrl URL of the oauth provider that accepts access token requests.
      * @param clientId The client identifier issued to the client during the registration process

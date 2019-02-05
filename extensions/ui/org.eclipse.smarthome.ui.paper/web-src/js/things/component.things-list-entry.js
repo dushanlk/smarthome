@@ -11,17 +11,15 @@
 
     });
 
-    ThingEntryController.$inject = [ '$location', '$timeout', '$mdDialog', 'thingTypeRepository', 'eventService', 'thingService', 'toastService' ];
+    ThingEntryController.$inject = [ '$location', '$timeout', '$mdDialog', 'thingTypeRepository', 'eventService' ];
 
-    function ThingEntryController($location, $timeout, $mdDialog, thingTypeRepository, eventService, thingService, toastService) {
+    function ThingEntryController($location, $timeout, $mdDialog, thingTypeRepository, eventService) {
         var ctrl = this;
         this.thingTypes = [];
 
         this.getThingTypeLabel = getThingTypeLabel;
         this.navigateTo = navigateTo;
         this.remove = remove;
-        this.toggleEnable = toggleEnable;
-        this.isEnabled = isEnabled;
 
         this.$onInit = activate;
         this.$onDestroy = dispose;
@@ -71,21 +69,6 @@
                 locals : {
                     thing : thing
                 }
-            });
-        }
-
-        function isEnabled() {
-            return ctrl.thing && ctrl.thing.statusInfo.statusDetail !== 'DISABLED';
-        }
-
-        function toggleEnable(event) {
-            event.stopImmediatePropagation();
-            var enable = !ctrl.isEnabled();
-
-            thingService.enable({
-                thingUID : ctrl.thing.UID
-            }, enable).$promise.then(function() {
-                toastService.showDefaultToast('Thing ' + (enable ? 'enabled' : 'disabled'));
             });
         }
     }

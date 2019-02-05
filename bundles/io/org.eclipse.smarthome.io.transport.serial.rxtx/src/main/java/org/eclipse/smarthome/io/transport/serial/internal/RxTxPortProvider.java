@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -27,8 +27,6 @@ import org.eclipse.smarthome.io.transport.serial.ProtocolType.PathType;
 import org.eclipse.smarthome.io.transport.serial.SerialPortIdentifier;
 import org.eclipse.smarthome.io.transport.serial.SerialPortProvider;
 import org.osgi.service.component.annotations.Component;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import gnu.io.CommPortIdentifier;
 
@@ -41,8 +39,6 @@ import gnu.io.CommPortIdentifier;
 @Component
 public class RxTxPortProvider implements SerialPortProvider {
 
-    private final Logger logger = LoggerFactory.getLogger(RxTxPortProvider.class);
-
     @Override
     public @Nullable SerialPortIdentifier getPortIdentifier(URI port) {
         CommPortIdentifier ident = null;
@@ -52,7 +48,6 @@ public class RxTxPortProvider implements SerialPortProvider {
         try {
             ident = CommPortIdentifier.getPortIdentifier(port.getPath());
         } catch (gnu.io.NoSuchPortException e) {
-            logger.debug("No SerialPortIdentifier found for: {}", port.getPath());
             return null;
         }
         return new SerialPortIdentifierImpl(ident);

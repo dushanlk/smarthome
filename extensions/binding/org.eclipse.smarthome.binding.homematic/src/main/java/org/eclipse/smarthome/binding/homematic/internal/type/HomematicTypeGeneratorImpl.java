@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -258,8 +258,6 @@ public class HomematicTypeGeneratorImpl implements HomematicTypeGenerator {
             channelType = DefaultSystemChannelTypeProvider.SYSTEM_CHANNEL_LOW_BATTERY;
         } else if (dp.getName().equals(VIRTUAL_DATAPOINT_NAME_SIGNAL_STRENGTH)) {
             channelType = DefaultSystemChannelTypeProvider.SYSTEM_CHANNEL_SIGNAL_STRENGTH;
-        } else if (dp.getName().equals(VIRTUAL_DATAPOINT_NAME_BUTTON)) {
-            channelType = DefaultSystemChannelTypeProvider.SYSTEM_BUTTON;
         } else {
             String itemType = MetadataUtils.getItemType(dp);
             String category = MetadataUtils.getCategory(dp, itemType);
@@ -368,6 +366,13 @@ public class HomematicTypeGeneratorImpl implements HomematicTypeGenerator {
             logger.warn("Can't create configDescriptionURI for device type {}", device.getType());
             return null;
         }
+    }
+
+    /**
+     * Returns true, if the given datapoint is a Thing status.
+     */
+    public static boolean isStatusDatapoint(HmDatapoint dp) {
+        return StringUtils.indexOfAny(dp.getName(), STATUS_DATAPOINT_NAMES) != -1;
     }
 
     /**

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,7 +15,7 @@ package org.eclipse.smarthome.binding.mqtt.generic.internal.values;
 import org.apache.commons.lang.StringUtils;
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.smarthome.binding.mqtt.generic.internal.MqttBindingConstants;
-import org.eclipse.smarthome.binding.mqtt.generic.internal.generic.ChannelConfig;
+import org.eclipse.smarthome.binding.mqtt.generic.internal.handler.GenericChannelConfig;
 
 /**
  * A factory t
@@ -30,42 +30,31 @@ public class ValueFactory {
      * @param config The channel configuration
      * @param channelTypeID The channel type, for instance TEXT_CHANNEL.
      */
-    public static Value createValueState(ChannelConfig config, String channelTypeID) throws IllegalArgumentException {
-        Value value;
+    public static AbstractMqttThingValue createValueState(GenericChannelConfig config, String channelTypeID) {
+        AbstractMqttThingValue value;
         switch (channelTypeID) {
             case MqttBindingConstants.STRING:
                 value = StringUtils.isBlank(config.allowedStates) ? new TextValue()
                         : new TextValue(config.allowedStates.split(","));
                 break;
-            case MqttBindingConstants.DATETIME:
-                value = new DateTimeValue();
-                break;
-            case MqttBindingConstants.IMAGE:
-                value = new ImageValue();
-                break;
-            case MqttBindingConstants.LOCATION:
-                value = new LocationValue();
-                break;
             case MqttBindingConstants.NUMBER:
-                value = new NumberValue(config.min, config.max, config.step);
+                value = new NumberValue(config.isFloat, config.min, config.max, config.step, false);
                 break;
             case MqttBindingConstants.DIMMER:
-                value = new PercentageValue(config.min, config.max, config.step, config.on, config.off);
+                value = new NumberValue(config.isFloat, config.min, config.max, config.step, true);
                 break;
-            case MqttBindingConstants.COLOR_RGB:
-                value = new ColorValue(true, config.on, config.off, config.onBrightness);
-                break;
-            case MqttBindingConstants.COLOR_HSB:
-                value = new ColorValue(false, config.on, config.off, config.onBrightness);
+            case MqttBindingConstants.COLOR:
+                value = new ColorValue(config.isRGB, null, null);
                 break;
             case MqttBindingConstants.SWITCH:
-                value = new OnOffValue(config.on, config.off);
+                if (StringUtils.isBlank(config.allowedStates)) {
+                    value = new OnOffValue(config.on, config.off, config.inverse);
+                } else {
+                    value = new OnOffValue(config.on, config.off, config.inverse);
+                }
                 break;
             case MqttBindingConstants.CONTACT:
-                value = new OpenCloseValue(config.on, config.off);
-                break;
-            case MqttBindingConstants.ROLLERSHUTTER:
-                value = new RollershutterValue(config.on, config.off, config.stop);
+                value = OnOffValue.createReceiveOnly(config.on, config.off, config.inverse);
                 break;
             default:
                 throw new IllegalArgumentException("ChannelTypeUID not recognised: " + channelTypeID);

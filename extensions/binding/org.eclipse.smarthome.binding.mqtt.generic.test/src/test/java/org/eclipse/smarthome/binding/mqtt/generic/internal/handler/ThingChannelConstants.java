@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,8 +20,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.eclipse.smarthome.binding.mqtt.generic.internal.MqttBindingConstants;
 import org.eclipse.smarthome.config.core.Configuration;
+import org.eclipse.smarthome.core.library.CoreItemFactory;
 import org.eclipse.smarthome.core.thing.Channel;
 import org.eclipse.smarthome.core.thing.ChannelUID;
 import org.eclipse.smarthome.core.thing.ThingUID;
@@ -39,12 +39,11 @@ public class ThingChannelConstants {
     final public static ThingUID testHomieThing = new ThingUID(HOMIE300_MQTT_THING, "device123");
     final public static ThingUID testHomeAssistantThing = new ThingUID(HOMEASSISTANT_MQTT_THING, "device234");
 
-    final public static ChannelTypeUID textChannel = new ChannelTypeUID(BINDING_ID, MqttBindingConstants.STRING);
-    final public static ChannelTypeUID textWithJsonChannel = new ChannelTypeUID(BINDING_ID,
-            MqttBindingConstants.STRING);
-    final public static ChannelTypeUID onoffChannel = new ChannelTypeUID(BINDING_ID, MqttBindingConstants.SWITCH);
-    final public static ChannelTypeUID numberChannel = new ChannelTypeUID(BINDING_ID, MqttBindingConstants.NUMBER);
-    final public static ChannelTypeUID percentageChannel = new ChannelTypeUID(BINDING_ID, MqttBindingConstants.DIMMER);
+    final public static ChannelTypeUID textChannel = new ChannelTypeUID(BINDING_ID, CoreItemFactory.STRING);
+    final public static ChannelTypeUID textWithJsonChannel = new ChannelTypeUID(BINDING_ID, CoreItemFactory.STRING);
+    final public static ChannelTypeUID onoffChannel = new ChannelTypeUID(BINDING_ID, CoreItemFactory.SWITCH);
+    final public static ChannelTypeUID numberChannel = new ChannelTypeUID(BINDING_ID, CoreItemFactory.NUMBER);
+    final public static ChannelTypeUID percentageChannel = new ChannelTypeUID(BINDING_ID, CoreItemFactory.DIMMER);
     final public static ChannelTypeUID unknownChannel = new ChannelTypeUID(BINDING_ID, "unknown");
 
     final public static ChannelUID textChannelUID = new ChannelUID(testGenericThing, "mytext");
@@ -103,7 +102,7 @@ public class ThingChannelConstants {
         data.put("min", BigDecimal.valueOf(1));
         data.put("max", BigDecimal.valueOf(99));
         data.put("step", BigDecimal.valueOf(2));
-        data.put("isDecimal", true);
+        data.put("isFloat", true);
         return new Configuration(data);
     }
 

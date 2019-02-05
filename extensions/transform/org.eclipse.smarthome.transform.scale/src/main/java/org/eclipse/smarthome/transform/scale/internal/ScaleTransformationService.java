@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -26,7 +26,6 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.eclipse.smarthome.core.library.types.QuantityType;
 import org.eclipse.smarthome.core.transform.AbstractFileTransformationService;
 import org.eclipse.smarthome.core.transform.TransformationException;
 import org.eclipse.smarthome.core.transform.TransformationService;
@@ -86,7 +85,7 @@ public class ScaleTransformationService extends AbstractFileTransformationServic
      * the range where it fits i.e. [min..max]=value or ]min..max]=value
      *
      * @param properties the list of properties defining all the available ranges
-     * @param source     the input to transform
+     * @param source the input to transform
      *
      */
     @Override
@@ -94,23 +93,11 @@ public class ScaleTransformationService extends AbstractFileTransformationServic
         try {
             final BigDecimal value = new BigDecimal(source);
 
-            return getScaleResult(data, source, value);
+            return data.entrySet().stream().filter(e -> e.getKey().contains(value)).findFirst().map(Map.Entry::getValue)
+                    .orElseThrow(() -> new TransformationException("No matching range for '" + source + "'"));
         } catch (NumberFormatException e) {
-            // Scale can only be used with numeric inputs, so lets try to see if ever its a valid quantity type
-            try {
-                final QuantityType<?> quantity = new QuantityType<>(source);
-                return getScaleResult(data, source, quantity.toBigDecimal());
-            } catch (NumberFormatException e2) {
-                throw new TransformationException("Scale can only be used with numeric inputs or valid quantity types");
-            }
+            throw new TransformationException("Scale can only be used with numeric inputs");
         }
-    }
-
-    private String getScaleResult(Map<Range, String> data, String source, final BigDecimal value)
-            throws TransformationException {
-        return data.entrySet().stream().filter(entry -> entry.getKey().contains(value)).findFirst()
-                .map(Map.Entry::getValue)
-                .orElseThrow(() -> new TransformationException("No matching range for '" + source + "'"));
     }
 
     @Override

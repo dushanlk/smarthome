@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,7 +17,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Locale;
-import java.util.Map.Entry;
 import java.util.Set;
 
 import org.eclipse.smarthome.automation.type.ActionType;
@@ -62,14 +61,16 @@ public class ModuleTypeRegistryImpl extends AbstractRegistry<ModuleType, String,
     @Override
     @SuppressWarnings("unchecked")
     public <T extends ModuleType> T get(String moduleTypeUID, Locale locale) {
-        Entry<Provider<ModuleType>, ModuleType> mType = getValueAndProvider(moduleTypeUID);
-        if (mType == null) {
-            return null;
-        } else {
-            ModuleType mt = locale == null ? mType.getValue()
-                    : ((ModuleTypeProvider) mType.getKey()).getModuleType(mType.getValue().getUID(), locale);
-            return (T) createCopy(mt);
+        for (Provider<ModuleType> provider : elementMap.keySet()) {
+            for (ModuleType mType : elementMap.get(provider)) {
+                if (mType.getUID().equals(moduleTypeUID)) {
+                    ModuleType mt = locale == null ? mType
+                            : ((ModuleTypeProvider) provider).getModuleType(mType.getUID(), locale);
+                    return (T) createCopy(mt);
+                }
+            }
         }
+        return null;
     }
 
     @Override
@@ -81,16 +82,18 @@ public class ModuleTypeRegistryImpl extends AbstractRegistry<ModuleType, String,
     @SuppressWarnings("unchecked")
     public <T extends ModuleType> Collection<T> getByTag(String moduleTypeTag, Locale locale) {
         Collection<T> result = new ArrayList<T>(20);
-        forEach((provider, mType) -> {
-            ModuleType mt = locale == null ? mType
-                    : ((ModuleTypeProvider) provider).getModuleType(mType.getUID(), locale);
-            Collection<String> tags = mt.getTags();
-            if (moduleTypeTag == null) {
-                result.add((T) createCopy(mt));
-            } else if (tags.contains(moduleTypeTag)) {
-                result.add((T) createCopy(mt));
+        for (Provider<ModuleType> provider : elementMap.keySet()) {
+            for (ModuleType mType : elementMap.get(provider)) {
+                ModuleType mt = locale == null ? mType
+                        : ((ModuleTypeProvider) provider).getModuleType(mType.getUID(), locale);
+                Collection<String> tags = mt.getTags();
+                if (moduleTypeTag == null) {
+                    result.add((T) createCopy(mt));
+                } else if (tags.contains(moduleTypeTag)) {
+                    result.add((T) createCopy(mt));
+                }
             }
-        });
+        }
         return result;
     }
 
@@ -104,15 +107,17 @@ public class ModuleTypeRegistryImpl extends AbstractRegistry<ModuleType, String,
     public <T extends ModuleType> Collection<T> getByTags(Locale locale, String... tags) {
         Set<String> tagSet = tags != null ? new HashSet<String>(Arrays.asList(tags)) : null;
         Collection<T> result = new ArrayList<T>(20);
-        forEach((provider, mType) -> {
-            ModuleType mt = locale == null ? mType
-                    : ((ModuleTypeProvider) provider).getModuleType(mType.getUID(), locale);
-            if (tagSet == null) {
-                result.add((T) createCopy(mt));
-            } else if (mt.getTags().containsAll(tagSet)) {
-                result.add((T) createCopy(mt));
+        for (Provider<ModuleType> provider : elementMap.keySet()) {
+            for (ModuleType mType : elementMap.get(provider)) {
+                ModuleType mt = locale == null ? mType
+                        : ((ModuleTypeProvider) provider).getModuleType(mType.getUID(), locale);
+                if (tagSet == null) {
+                    result.add((T) createCopy(mt));
+                } else if (mt.getTags().containsAll(tagSet)) {
+                    result.add((T) createCopy(mt));
+                }
             }
-        });
+        }
         return result;
     }
 
