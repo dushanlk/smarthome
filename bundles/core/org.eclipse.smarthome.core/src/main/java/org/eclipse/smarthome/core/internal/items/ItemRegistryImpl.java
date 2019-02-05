@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,7 +17,9 @@ import static java.util.stream.Collectors.toList;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 import org.eclipse.smarthome.core.common.registry.AbstractRegistry;
 import org.eclipse.smarthome.core.common.registry.Provider;
@@ -26,6 +28,8 @@ import org.eclipse.smarthome.core.i18n.UnitProvider;
 import org.eclipse.smarthome.core.items.GenericItem;
 import org.eclipse.smarthome.core.items.GroupItem;
 import org.eclipse.smarthome.core.items.Item;
+import org.eclipse.smarthome.core.items.ItemBuilder;
+import org.eclipse.smarthome.core.items.ItemFactory;
 import org.eclipse.smarthome.core.items.ItemNotFoundException;
 import org.eclipse.smarthome.core.items.ItemNotUniqueException;
 import org.eclipse.smarthome.core.items.ItemProvider;
@@ -36,7 +40,6 @@ import org.eclipse.smarthome.core.items.ManagedItemProvider;
 import org.eclipse.smarthome.core.items.MetadataRegistry;
 import org.eclipse.smarthome.core.items.RegistryHook;
 import org.eclipse.smarthome.core.items.events.ItemEventFactory;
-import org.eclipse.smarthome.core.service.CommandDescriptionService;
 import org.eclipse.smarthome.core.service.StateDescriptionService;
 import org.osgi.service.component.ComponentContext;
 import org.osgi.service.component.annotations.Activate;
@@ -64,8 +67,8 @@ public class ItemRegistryImpl extends AbstractRegistry<Item, String, ItemProvide
 
     private final List<RegistryHook<Item>> registryHooks = new CopyOnWriteArrayList<>();
     private StateDescriptionService stateDescriptionService;
-    private CommandDescriptionService commandDescriptionService;
     private MetadataRegistry metadataRegistry;
+    private final Set<ItemFactory> itemFactories = new CopyOnWriteArraySet<>();
 
     private UnitProvider unitProvider;
     private ItemStateConverter itemStateConverter;
@@ -192,9 +195,8 @@ public class ItemRegistryImpl extends AbstractRegistry<Item, String, ItemProvide
     private void injectServices(Item item) {
         if (item instanceof GenericItem) {
             GenericItem genericItem = (GenericItem) item;
-            genericItem.setEventPublisher(getEventPublisher());
+            genericItem.setEventPublisher(eventPublisher);
             genericItem.setStateDescriptionService(stateDescriptionService);
-            genericItem.setCommandDescriptionService(commandDescriptionService);
             genericItem.setUnitProvider(unitProvider);
             genericItem.setItemStateConverter(itemStateConverter);
         }
@@ -353,9 +355,11 @@ public class ItemRegistryImpl extends AbstractRegistry<Item, String, ItemProvide
 
     @Override
     public Item remove(String itemName, boolean recursive) {
-        return ((ManagedItemProvider) getManagedProvider()
-                .orElseThrow(() -> new IllegalStateException("ManagedProvider is not available"))).remove(itemName,
-                        recursive);
+        if (this.managedProvider != null) {
+            return ((ManagedItemProvider) this.managedProvider).remove(itemName, recursive);
+        } else {
+            throw new IllegalStateException("ManagedProvider is not available");
+        }
     }
 
     @Override
@@ -427,6 +431,16 @@ public class ItemRegistryImpl extends AbstractRegistry<Item, String, ItemProvide
         registryHooks.remove(hook);
     }
 
+    @Override
+    public ItemBuilder newItemBuilder(Item item) {
+        return new ItemBuilderImpl(itemFactories, item);
+    }
+
+    @Override
+    public ItemBuilder newItemBuilder(String itemType, String itemName) {
+        return new ItemBuilderImpl(itemFactories, itemType, itemName);
+    }
+
     @Activate
     protected void activate(final ComponentContext componentContext) {
         super.activate(componentContext.getBundleContext());
@@ -455,23 +469,6 @@ public class ItemRegistryImpl extends AbstractRegistry<Item, String, ItemProvide
     }
 
     @Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC)
-    public void setCommandDescriptionService(CommandDescriptionService commandDescriptionService) {
-        this.commandDescriptionService = commandDescriptionService;
-
-        for (Item item : getItems()) {
-            ((GenericItem) item).setCommandDescriptionService(commandDescriptionService);
-        }
-    }
-
-    public void unsetCommandDescriptionService(CommandDescriptionService commandDescriptionService) {
-        this.commandDescriptionService = null;
-
-        for (Item item : getItems()) {
-            ((GenericItem) item).setCommandDescriptionService(null);
-        }
-    }
-
-    @Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC)
     protected void setManagedProvider(ManagedItemProvider provider) {
         super.setManagedProvider(provider);
     }
@@ -487,6 +484,24 @@ public class ItemRegistryImpl extends AbstractRegistry<Item, String, ItemProvide
 
     protected void unsetMetadataRegistry(MetadataRegistry metadataRegistry) {
         this.metadataRegistry = null;
+    }
+
+    @Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
+    protected void addItemFactory(ItemFactory itemFactory) {
+        itemFactories.add(itemFactory);
+    }
+
+    protected void removeItemFactory(ItemFactory itemFactory) {
+        itemFactories.remove(itemFactory);
+    }
+
+    @Reference(target = "(component.name=org.eclipse.smarthome.core.library.CoreItemFactory)")
+    protected void setCoreItemFactory(ItemFactory coreItemFactory) {
+        itemFactories.add(coreItemFactory);
+    }
+
+    protected void unsetCoreItemFactory(ItemFactory coreItemFactory) {
+        itemFactories.remove(coreItemFactory);
     }
 
 }

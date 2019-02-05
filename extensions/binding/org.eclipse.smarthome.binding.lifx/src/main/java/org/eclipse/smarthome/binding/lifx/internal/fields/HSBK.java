@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -44,9 +44,9 @@ public class HSBK {
         this(other.hue, other.saturation, other.brightness, other.kelvin);
     }
 
-    public HSBK(HSBType hsb, int kelvin) {
+    public HSBK(HSBType hsb, PercentType temperature) {
         setHSB(hsb);
-        this.kelvin = kelvin;
+        setTemperature(temperature);
     }
 
     public int getHue() {
@@ -72,6 +72,10 @@ public class HSBK {
         return new HSBType(hue, saturation, brightness);
     }
 
+    public PercentType getTemperature() {
+        return kelvinToPercentType(kelvin);
+    }
+
     public void setHSB(HSBType hsb) {
         setHue(hsb.getHue());
         setSaturation(hsb.getSaturation());
@@ -90,8 +94,8 @@ public class HSBK {
         this.brightness = percentTypeToBrightness(brightness);
     }
 
-    public void setKelvin(int kelvin) {
-        this.kelvin = kelvin;
+    public void setTemperature(PercentType temperature) {
+        kelvin = percentTypeToKelvin(temperature);
     }
 
     @Override

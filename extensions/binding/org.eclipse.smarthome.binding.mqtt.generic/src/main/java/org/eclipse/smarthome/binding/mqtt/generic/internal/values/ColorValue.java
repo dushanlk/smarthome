@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,59 +12,67 @@
  */
 package org.eclipse.smarthome.binding.mqtt.generic.internal.values;
 
-import java.math.BigDecimal;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.util.Collections;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.core.library.CoreItemFactory;
 import org.eclipse.smarthome.core.library.types.HSBType;
 import org.eclipse.smarthome.core.library.types.OnOffType;
+import org.eclipse.smarthome.core.library.types.OpenClosedType;
 import org.eclipse.smarthome.core.library.types.PercentType;
 import org.eclipse.smarthome.core.library.types.StringType;
 import org.eclipse.smarthome.core.types.Command;
-import org.eclipse.smarthome.core.types.UnDefType;
+import org.eclipse.smarthome.core.types.State;
+import org.eclipse.smarthome.core.types.StateDescription;
 
 /**
  * Implements a color value.
  *
- * <p>
- * Accepts user updates from a HSBType, OnOffType and StringType.
- * </p>
- * Accepts MQTT state updates as OnOffType and a
- * StringType with comma separated HSB ("h,s,b"), RGB ("r,g,b") and on, off strings.
- * On, Off strings can be customized.
+ * Accepts user updates from a HSBType, OnOffType or OpenClosedType.
+ * Accepts MQTT state updates as comma separated HSB ("h,s,b"), RGB ("r,g,b") and on, off strings.
+ * On, Off strings can be customized but "1","ON","0","OFF" are always recognized.
  *
  * @author David Graeff - Initial contribution
  */
 @NonNullByDefault
-public class ColorValue extends Value {
+public class ColorValue implements AbstractMqttThingValue {
+    private HSBType colorValue;
     private final boolean isRGB;
     private final String onValue;
     private final String offValue;
-    private final int onBrightness;
 
     /**
      * Creates a non initialized color value.
      *
-     * @param isRGB True if this is an RGB color value instead of a HSB one.
      * @param onValue The ON value string. This will be compared to MQTT messages.
      * @param offValue The OFF value string. This will be compared to MQTT messages.
-     * @param onBrightness When receiving a ON command, the brightness percentage is set to this value
      */
-    public ColorValue(boolean isRGB, @Nullable String onValue, @Nullable String offValue, int onBrightness) {
-        super(CoreItemFactory.COLOR,
-                Stream.of(OnOffType.class, PercentType.class, StringType.class).collect(Collectors.toList()));
-
-        if (onBrightness > 100) {
-            throw new IllegalArgumentException("Brightness parameter must be <= 100");
-        }
-
+    public ColorValue(boolean isRGB, @Nullable String onValue, @Nullable String offValue) {
         this.isRGB = isRGB;
+        colorValue = new HSBType();
         this.onValue = onValue == null ? "ON" : onValue;
         this.offValue = offValue == null ? "OFF" : offValue;
-        this.onBrightness = onBrightness;
+    }
+
+    /**
+     * Create color type from string.
+     *
+     * @param colorTextValue Expects hue,saturation,brightness as comma separated string. hue is in the range [0,360],
+     *            saturation and brightness are in [0,100].
+     * @param onValue The ON value string. This will be compared to MQTT messages.
+     * @param offValue The OFF value string. This will be compared to MQTT messages.
+     */
+    public ColorValue(boolean isRGB, String colorTextValue, @Nullable String onValue, @Nullable String offValue) {
+        this.isRGB = isRGB;
+        colorValue = new HSBType(colorTextValue);
+        this.onValue = onValue == null ? "ON" : onValue;
+        this.offValue = offValue == null ? "OFF" : offValue;
+    }
+
+    @Override
+    public State getValue() {
+        return colorValue;
     }
 
     /**
@@ -75,56 +83,69 @@ public class ColorValue extends Value {
      *         [0,255].
      */
     @Override
-    public void update(Command command) throws IllegalArgumentException {
-        HSBType oldvalue = (state == UnDefType.UNDEF) ? new HSBType() : (HSBType) state;
-        if (command instanceof HSBType) {
-            state = (HSBType) command;
-        } else if (command instanceof OnOffType) {
+    public String update(Command command) throws IllegalArgumentException {
+        if (command instanceof OnOffType) {
             OnOffType boolValue = ((OnOffType) command);
-            PercentType minOn = new PercentType(Math.max(oldvalue.getBrightness().intValue(), onBrightness));
-            state = new HSBType(oldvalue.getHue(), oldvalue.getSaturation(),
+            PercentType minOn = new PercentType(Math.max(colorValue.getBrightness().intValue(), 10));
+            colorValue = new HSBType(colorValue.getHue(), colorValue.getSaturation(),
                     boolValue == OnOffType.ON ? minOn : new PercentType(0));
-        } else if (command instanceof PercentType) {
-            state = new HSBType(oldvalue.getHue(), oldvalue.getSaturation(), (PercentType) command);
-        } else {
-            final String updatedValue = command.toString();
-            if (onValue.equals(updatedValue)) {
-                PercentType minOn = new PercentType(Math.max(oldvalue.getBrightness().intValue(), onBrightness));
-                state = new HSBType(oldvalue.getHue(), oldvalue.getSaturation(), minOn);
-            } else if (offValue.equals(updatedValue)) {
-                state = new HSBType(oldvalue.getHue(), oldvalue.getSaturation(), new PercentType(0));
-            } else if (isRGB) {
-                String[] split = updatedValue.split(",");
+        } else if (command instanceof OpenClosedType) {
+            OnOffType boolValue = ((OpenClosedType) command) == OpenClosedType.OPEN ? OnOffType.ON : OnOffType.OFF;
+            PercentType minOn = new PercentType(Math.max(colorValue.getBrightness().intValue(), 10));
+            colorValue = new HSBType(colorValue.getHue(), colorValue.getSaturation(),
+                    boolValue == OnOffType.ON ? minOn : new PercentType(0));
+        } else if (command instanceof HSBType) {
+            colorValue = (HSBType) command;
+        } else if (command instanceof StringType) {
+            if (isRGB) {
+                String[] split = command.toString().split(",");
                 if (split.length != 3) {
-                    throw new IllegalArgumentException(updatedValue + " is not a valid RGB syntax");
+                    throw new IllegalArgumentException(command.toString() + " is not a valid RGB syntax");
                 }
-                state = HSBType.fromRGB(Integer.parseInt(split[0]), Integer.parseInt(split[1]),
+                colorValue = HSBType.fromRGB(Integer.parseInt(split[0]), Integer.parseInt(split[1]),
                         Integer.parseInt(split[2]));
             } else {
-                state = new HSBType(updatedValue);
+                colorValue = new HSBType(command.toString());
+
             }
+        } else {
+            throw new IllegalArgumentException("Didn't recognise the color value " + command.toString());
         }
+        return colorValue.toString();
     }
 
-    private static BigDecimal factor = new BigDecimal(2.5);
+    /**
+     * Updates the color value.
+     *
+     * @param updatedValue Expects hue,saturation,brightness as comma separated string. hue is in the range [0,360],
+     *            saturation and brightness are in [0,100]. If rgb is enabled, a string red,green,blue is
+     *            expected.
+     *            red,green,blue are within [0,255].
+     * @return Returns the color value as HSB/HSV string (hue, saturation, brightness) eg. "60, 100, 100".
+     *         If rgb is enabled, an RGB string (red,green,blue) will be returned instead. red,green,blue are within
+     *         [0,255].
+     */
+    @Override
+    public State update(String updatedValue) throws IllegalArgumentException {
+        if (onValue.equals(updatedValue) || "ON".equals(updatedValue.toUpperCase()) || "1".equals(updatedValue)) {
+            PercentType minOn = new PercentType(Math.max(colorValue.getBrightness().intValue(), 10));
+            colorValue = new HSBType(colorValue.getHue(), colorValue.getSaturation(), minOn);
+        } else if (offValue.equals(updatedValue) || "OFF".equals(updatedValue.toUpperCase())
+                || "0".equals(updatedValue)) {
+            colorValue = new HSBType(colorValue.getHue(), colorValue.getSaturation(), new PercentType(0));
+        } else {
+            colorValue = new HSBType(updatedValue);
+        }
+        return colorValue;
+    }
 
     @Override
-    public String getMQTTpublishValue() {
-        if (state == UnDefType.UNDEF) {
-            return "";
-        }
+    public String channelTypeID() {
+        return CoreItemFactory.COLOR;
+    }
 
-        if (isRGB) {
-            PercentType[] rgb = ((HSBType) state).toRGB();
-            StringBuilder b = new StringBuilder();
-            b.append(rgb[0].toBigDecimal().multiply(factor).intValue());
-            b.append(',');
-            b.append(rgb[1].toBigDecimal().multiply(factor).intValue());
-            b.append(',');
-            b.append(rgb[2].toBigDecimal().multiply(factor).intValue());
-            return b.toString();
-        } else {
-            return state.toString();
-        }
+    @Override
+    public StateDescription createStateDescription(String unit, boolean readOnly) {
+        return new StateDescription(null, null, null, "%s " + unit, readOnly, Collections.emptyList());
     }
 }

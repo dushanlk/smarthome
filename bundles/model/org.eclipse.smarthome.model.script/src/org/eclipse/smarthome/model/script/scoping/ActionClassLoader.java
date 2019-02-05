@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,7 +12,6 @@
  */
 package org.eclipse.smarthome.model.script.scoping;
 
-import org.eclipse.smarthome.core.thing.binding.ThingActions;
 import org.eclipse.smarthome.model.script.ScriptServiceUtil;
 import org.eclipse.smarthome.model.script.engine.action.ActionService;
 
@@ -38,11 +37,6 @@ final public class ActionClassLoader extends ClassLoader {
             for (ActionService actionService : ScriptServiceUtil.getActionServices()) {
                 if (actionService.getActionClassName().equals(name)) {
                     return actionService.getActionClass();
-                }
-            }
-            for (ThingActions actions : ScriptServiceUtil.getThingActions()) {
-                if (actions.getClass().getName().equals(name)) {
-                    return actions.getClass();
                 }
             }
         }

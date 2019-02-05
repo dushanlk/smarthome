@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -76,14 +76,15 @@ public class MetadataRegistryImpl extends AbstractRegistry<Metadata, MetadataKey
     }
 
     protected void unsetManagedProvider(ManagedMetadataProvider managedProvider) {
-        super.unsetManagedProvider(managedProvider);
+        super.removeManagedProvider(managedProvider);
     }
 
     @Override
     public void removeItemMetadata(String itemName) {
-        // remove our metadata for that item
-        getManagedProvider()
-                .ifPresent(managedProvider -> ((ManagedMetadataProvider) managedProvider).removeItemMetadata(itemName));
+        if (managedProvider != null) {
+            // remove our metadata for that item
+            ((ManagedMetadataProvider) managedProvider).removeItemMetadata(itemName);
+        }
     }
 
 }

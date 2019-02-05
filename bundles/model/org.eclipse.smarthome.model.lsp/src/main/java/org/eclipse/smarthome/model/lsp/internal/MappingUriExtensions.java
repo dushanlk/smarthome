@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -100,26 +100,6 @@ public class MappingUriExtensions extends UriExtensions {
         logger.debug("Path mapping could not be done for '{}', leaving it untouched", pathWithScheme);
         java.net.URI javaNetUri = java.net.URI.create(pathWithScheme);
         return URI.createURI(toPathAsInXtext212(javaNetUri));
-    }
-
-    @Override
-    public String toUriString(URI uri) {
-        if (clientLocation == null) {
-            return uri.toString();
-        }
-        return mapToClientPath(uri.toString());
-    }
-
-    @Override
-    public String toUriString(java.net.URI uri) {
-        return toUriString(URI.createURI(uri.toString()));
-    }
-
-    private String mapToClientPath(String pathWithScheme) {
-        String clientPath = toPathAsInXtext212(
-                java.net.URI.create(pathWithScheme.replace(serverLocation, clientLocation)));
-        logger.trace("Mapping server path {} to client path {}", pathWithScheme, clientPath);
-        return clientPath;
     }
 
     protected final String removeTrailingSlash(String path) {

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -32,21 +32,11 @@ public class MqttBindingConstants {
     public static final ThingTypeUID HOMEASSISTANT_MQTT_THING = new ThingTypeUID(BINDING_ID, "homeassistant");
 
     // Generic thing channel types
-    public static final String COLOR_RGB = "colorRGB";
-    public static final String COLOR_HSB = "colorHSB";
-    public static final String CONTACT = "contact";
-    public static final String DIMMER = "dimmer";
-    public static final String NUMBER = "number";
-    public static final String STRING = "string";
-    public static final String SWITCH = "switch";
-    public static final String IMAGE = "image";
-    public static final String LOCATION = "location";
-    public static final String DATETIME = "datetime";
-    public static final String ROLLERSHUTTER = "rollershutter";
-
-    public static final String CONFIG_HA_CHANNEL = "mqtt:ha_channel";
-    public static final String CONFIG_HOMIE_CHANNEL = "mqtt:homie_channel";
-
-    public static final String HOMIE_PROPERTY_VERSION = "homieversion";
-    public static final String HOMIE_PROPERTY_HEARTBEAT_INTERVAL = "heartbeat_interval";
+    public static final String COLOR = "Color";
+    public static final String CONTACT = "Contact";
+    public static final String DATETIME = "DateTime";
+    public static final String DIMMER = "Dimmer";
+    public static final String NUMBER = "Number";
+    public static final String STRING = "String";
+    public static final String SWITCH = "Switch";
 }

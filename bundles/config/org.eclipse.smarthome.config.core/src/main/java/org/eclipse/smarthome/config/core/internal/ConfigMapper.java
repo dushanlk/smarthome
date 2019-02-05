@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,7 +19,6 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -166,8 +165,6 @@ public class ConfigMapper {
                 @SuppressWarnings({ "unchecked" })
                 final Enum<?> enumvalue = Enum.valueOf(enumType, value.toString());
                 result = enumvalue;
-            } else if (Collection.class.isAssignableFrom(type)) {
-                result = Collections.singletonList(value);
             }
         }
         return result;

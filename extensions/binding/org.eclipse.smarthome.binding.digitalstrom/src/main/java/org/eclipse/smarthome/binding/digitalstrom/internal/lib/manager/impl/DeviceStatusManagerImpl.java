@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -422,8 +422,7 @@ public class DeviceStatusManagerImpl implements DeviceStatusManager {
         }
 
         private void filterCommand(DeviceStateUpdate deviceStateUpdate, Device device) {
-            DeviceStateUpdate intDeviceStateUpdate = deviceStateUpdate;
-            String stateUpdateType = intDeviceStateUpdate.getType();
+            String stateUpdateType = deviceStateUpdate.getType();
             short newAngle = 0;
             if (stateUpdateType.equals(DeviceStateUpdate.SLAT_ANGLE_INCREASE)
                     || stateUpdateType.equals(DeviceStateUpdate.SLAT_ANGLE_DECREASE)) {
@@ -433,16 +432,16 @@ public class DeviceStatusManagerImpl implements DeviceStatusManager {
             while (nextDeviceStateUpdate != null && nextDeviceStateUpdate.getType().equals(stateUpdateType)) {
                 switch (stateUpdateType) {
                     case DeviceStateUpdate.OUTPUT:
-                        intDeviceStateUpdate = nextDeviceStateUpdate;
+                        deviceStateUpdate = nextDeviceStateUpdate;
                         nextDeviceStateUpdate = device.getNextDeviceUpdateState();
                         break;
                     case DeviceStateUpdate.SLAT_ANGLE_INCREASE:
-                        if (intDeviceStateUpdate.getValueAsInteger() == 1) {
+                        if (deviceStateUpdate.getValueAsInteger() == 1) {
                             newAngle = (short) (newAngle + DeviceConstants.ANGLE_STEP_SLAT);
                         }
                         break;
                     case DeviceStateUpdate.SLAT_ANGLE_DECREASE:
-                        if (intDeviceStateUpdate.getValueAsInteger() == 1) {
+                        if (deviceStateUpdate.getValueAsInteger() == 1) {
                             newAngle = (short) (newAngle - DeviceConstants.ANGLE_STEP_SLAT);
                         }
                         break;
@@ -459,16 +458,16 @@ public class DeviceStatusManagerImpl implements DeviceStatusManager {
                 if (!(stateUpdateType.equals(DeviceStateUpdate.SLAT_ANGLE_INCREASE) && checkAngleIsMinMax(device) == 1)
                         || !(stateUpdateType.equals(DeviceStateUpdate.SLAT_ANGLE_DECREASE)
                                 && checkAngleIsMinMax(device) == 0)) {
-                    intDeviceStateUpdate = new DeviceStateUpdateImpl(DeviceStateUpdate.SLAT_ANGLE, newAngle);
+                    deviceStateUpdate = new DeviceStateUpdateImpl(DeviceStateUpdate.SLAT_ANGLE, newAngle);
                 }
             }
-            sendComandsToDSS(device, intDeviceStateUpdate);
+            sendComandsToDSS(device, deviceStateUpdate);
             if (nextDeviceStateUpdate != null) {
-                if (intDeviceStateUpdate.getType() == DeviceStateUpdate.UPDATE_SCENE_CONFIG
-                        || intDeviceStateUpdate.getType() == DeviceStateUpdate.UPDATE_SCENE_OUTPUT) {
-                    updateSceneData(device, intDeviceStateUpdate);
+                if (deviceStateUpdate.getType() == DeviceStateUpdate.UPDATE_SCENE_CONFIG
+                        || deviceStateUpdate.getType() == DeviceStateUpdate.UPDATE_SCENE_OUTPUT) {
+                    updateSceneData(device, deviceStateUpdate);
                 } else {
-                    sendComandsToDSS(device, intDeviceStateUpdate);
+                    sendComandsToDSS(device, deviceStateUpdate);
                 }
             }
         }

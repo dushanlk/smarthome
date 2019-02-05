@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -40,25 +40,24 @@ public final class AccessTokenResponse implements Serializable, Cloneable {
      * The access token issued by the authorization server. It is used
      * by the client to gain access to a resource.
      *
-     * <p>
-     * This token must be confidential in transit and storage.
+     * @see https://tools.ietf.org/html/rfc6749#section-1.4
      *
-     * @see <a href="https://tools.ietf.org/html/rfc6749#section-1.4">rfc6749 section-1.4</a>
-     * @see <a href="https://tools.ietf.org/html/rfc6749#section-10.3">rfc6749 section-10.3</a>
+     *      This token must be confidential in transit and storage.
+     * @see https://tools.ietf.org/html/rfc6749#section-10.3
      */
     private String accessToken;
 
     /**
      * Token type. e.g. Bearer, MAC
      *
-     * @see <a href="https://tools.ietf.org/html/rfc6749#section-7.1">rfc6749 section-7.1</a>
+     * @see https://tools.ietf.org/html/rfc6749#section-7.1
      */
     private String tokenType;
 
     /**
      * Number of seconds that this OAuthToken is valid for since the time it was created.
      *
-     * @see <a href="https://tools.ietf.org/html/rfc6749#section-4.2.2">rfc6749 section-4.2.2</a>
+     * @see https://tools.ietf.org/html/rfc6749#section-4.2.2
      */
     private long expiresIn;
 
@@ -68,11 +67,10 @@ public final class AccessTokenResponse implements Serializable, Cloneable {
      * intended for use only with authorization servers and are never sent
      * to resource servers.
      *
-     * <p>
-     * This token must be confidential in transit and storage.
+     * @see https://tools.ietf.org/html/rfc6749#section-1.5
      *
-     * @see <a href="https://tools.ietf.org/html/rfc6749#section-1.5">rfc6749 section-1.5</a>
-     * @see <a href="https://tools.ietf.org/html/rfc6749#section-10.4">rfc6749 section-10.4</a>
+     *      This token must be confidential in transit and storage.
+     * @see https://tools.ietf.org/html/rfc6749#section-10.4
      */
     private String refreshToken;
 
@@ -81,7 +79,7 @@ public final class AccessTokenResponse implements Serializable, Cloneable {
      * by the authorization server to inform the client of the scope of the access token
      * issued.
      *
-     * @see <a href="https://tools.ietf.org/html/rfc6749#section-3.3">rfc6749 section-3.3</a>
+     * @see https://tools.ietf.org/html/rfc6749#section-3.3
      */
     private String scope;
 
@@ -89,7 +87,7 @@ public final class AccessTokenResponse implements Serializable, Cloneable {
      * If the {@code state} parameter was present in the access token request.
      * The exact value should be returned as-is from the authorization provider.
      *
-     * <a href="https://tools.ietf.org/html/rfc6749#section-4.2.2">rfc6749 section-4.2.2</a>
+     * https://tools.ietf.org/html/rfc6749#section-4.2.2
      */
     private String state;
 

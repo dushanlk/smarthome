@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -95,7 +95,7 @@ public class HomematicConstants {
     public static final String VIRTUAL_DATAPOINT_NAME_RSSI = "RSSI";
     public static final String VIRTUAL_DATAPOINT_NAME_STATE_CONTACT = "STATE_CONTACT";
     public static final String VIRTUAL_DATAPOINT_NAME_SIGNAL_STRENGTH = "SIGNAL_STRENGTH";
-    public static final String VIRTUAL_DATAPOINT_NAME_BUTTON = "BUTTON";
+    public static final String VIRTUAL_DATAPOINT_NAME_PRESS = "PRESS";
 
     public static final String RPC_METHODNAME_EVENT = "event";
     public static final String RPC_METHODNAME_LIST_DEVICES = "listDevices";

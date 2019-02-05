@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,7 +21,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Supplier;
 
-import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,13 +35,12 @@ import org.slf4j.LoggerFactory;
  * @param <K> the type of the key
  * @param <V> the type of the value
  */
-@NonNullByDefault
 public class ExpiringCacheMap<K, V> {
 
     private final Logger logger = LoggerFactory.getLogger(ExpiringCacheMap.class);
 
     private final long expiry;
-    private final ConcurrentMap<K, ExpiringCache<@Nullable V>> items;
+    private final ConcurrentMap<K, ExpiringCache<V>> items;
 
     /**
      * Creates a new instance.
@@ -69,7 +67,7 @@ public class ExpiringCacheMap<K, V> {
      * @param key the key with which the specified value is to be associated
      * @param action the action for the item to be associated with the specified key to retrieve/calculate the value
      */
-    public void put(K key, Supplier<@Nullable V> action) {
+    public void put(K key, Supplier<V> action) {
         put(key, new ExpiringCache<>(expiry, action));
     }
 
@@ -79,10 +77,14 @@ public class ExpiringCacheMap<K, V> {
      * @param key the key with which the specified value is to be associated
      * @param item the item to be associated with the specified key
      */
-    public void put(K key, ExpiringCache<@Nullable V> item) {
+    public void put(K key, ExpiringCache<V> item) {
         if (key == null) {
             throw new IllegalArgumentException("Item cannot be added as key is null.");
         }
+        if (item == null) {
+            throw new IllegalArgumentException("Item cannot be added as item is null.");
+        }
+
         items.put(key, item);
     }
 
@@ -96,6 +98,10 @@ public class ExpiringCacheMap<K, V> {
         if (key == null) {
             throw new IllegalArgumentException("Item cannot be added as key is null.");
         }
+        if (item == null) {
+            throw new IllegalArgumentException("Item cannot be added as item is null.");
+        }
+
         items.putIfAbsent(key, item);
     }
 
@@ -108,7 +114,7 @@ public class ExpiringCacheMap<K, V> {
      * @param action the action for the item to be associated with the specified key to retrieve/calculate the value
      * @return the (cached) value for the specified key
      */
-    public @Nullable V putIfAbsentAndGet(K key, Supplier<V> action) {
+    public V putIfAbsentAndGet(K key, Supplier<V> action) {
         return putIfAbsentAndGet(key, new ExpiringCache<>(expiry, action));
     }
 
@@ -121,10 +127,10 @@ public class ExpiringCacheMap<K, V> {
      * @param item the item to be associated with the specified key
      * @return the (cached) value for the specified key
      */
-    public @Nullable V putIfAbsentAndGet(K key, ExpiringCache<V> item) {
+    public V putIfAbsentAndGet(K key, ExpiringCache<V> item) {
         putIfAbsent(key, item);
 
-        return get(key);
+        return this.get(key);
     }
 
     /**
@@ -133,9 +139,8 @@ public class ExpiringCacheMap<K, V> {
      * @param key the key whose value in the cache is to be updated
      * @param value the new value
      */
-    @SuppressWarnings({ "null", "unused" })
     public void putValue(K key, @Nullable V value) {
-        final ExpiringCache<@Nullable V> item = items.get(key);
+        final ExpiringCache<V> item = items.get(key);
         if (item == null) {
             throw new IllegalArgumentException(String.format("No item found for key '%s' .", key));
         } else {
@@ -188,9 +193,8 @@ public class ExpiringCacheMap<K, V> {
      * @param key the key whose associated value is to be returned
      * @return the value associated with the given key, or null if there is no cached value for the given key
      */
-    @SuppressWarnings({ "null", "unused" })
-    public @Nullable V get(K key) {
-        final ExpiringCache<@Nullable V> item = items.get(key);
+    public V get(K key) {
+        final ExpiringCache<V> item = items.get(key);
         if (item == null) {
             logger.debug("No item for key '{}' found", key);
             return null;
@@ -204,9 +208,9 @@ public class ExpiringCacheMap<K, V> {
      *
      * @return the collection of all values
      */
-    public synchronized Collection<@Nullable V> values() {
-        final Collection<@Nullable V> values = new LinkedList<>();
-        for (final ExpiringCache<@Nullable V> item : items.values()) {
+    public synchronized Collection<V> values() {
+        final Collection<V> values = new LinkedList<>();
+        for (final ExpiringCache<V> item : items.values()) {
             values.add(item.getValue());
         }
         return values;
@@ -217,9 +221,8 @@ public class ExpiringCacheMap<K, V> {
      *
      * @param key the key whose associated value is to be invalidated
      */
-    @SuppressWarnings({ "null", "unused" })
     public synchronized void invalidate(K key) {
-        final ExpiringCache<@Nullable V> item = items.get(key);
+        final ExpiringCache<V> item = items.get(key);
         if (item == null) {
             logger.debug("No item for key '{}' found", key);
         } else {
@@ -240,9 +243,8 @@ public class ExpiringCacheMap<K, V> {
      * @param key the key whose associated value is to be refreshed
      * @return the value associated with the given key, or null if there is no cached value for the given key
      */
-    @SuppressWarnings({ "null", "unused" })
-    public synchronized @Nullable V refresh(K key) {
-        final ExpiringCache<@Nullable V> item = items.get(key);
+    public synchronized V refresh(K key) {
+        final ExpiringCache<V> item = items.get(key);
         if (item == null) {
             logger.debug("No item for key '{}' found", key);
             return null;
@@ -256,9 +258,9 @@ public class ExpiringCacheMap<K, V> {
      *
      * @return the collection of all values
      */
-    public synchronized Collection<@Nullable V> refreshAll() {
-        final Collection<@Nullable V> values = new LinkedList<>();
-        for (final ExpiringCache<@Nullable V> item : items.values()) {
+    public synchronized Collection<V> refreshAll() {
+        final Collection<V> values = new LinkedList<>();
+        for (final ExpiringCache<V> item : items.values()) {
             values.add(item.refreshValue());
         }
         return values;

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -32,7 +32,7 @@ import gnu.io.rfc2217.TelnetSerialPort;
 public class SerialPortIdentifierImpl implements SerialPortIdentifier {
 
     final TelnetSerialPort id;
-    private final URI uri;
+    private URI uri;
 
     /**
      * Constructor.
@@ -53,7 +53,7 @@ public class SerialPortIdentifierImpl implements SerialPortIdentifier {
     @Override
     public SerialPort open(String owner, int timeout) throws PortInUseException {
         try {
-            id.getTelnetClient().setConnectTimeout(timeout);
+            id.getTelnetClient().setDefaultTimeout(timeout);
             id.getTelnetClient().connect(uri.getHost(), uri.getPort());
             return new RxTxSerialPort(id);
         } catch (Exception e) {

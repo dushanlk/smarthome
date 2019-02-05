@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,6 +17,7 @@ import static org.eclipse.smarthome.core.thing.type.ChannelKind.TRIGGER;
 import static org.eclipse.smarthome.core.types.RefreshType.REFRESH;
 
 import java.lang.invoke.MethodHandles;
+import java.text.ParseException;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashSet;
@@ -36,8 +37,9 @@ import org.eclipse.smarthome.binding.astro.internal.job.Job;
 import org.eclipse.smarthome.binding.astro.internal.job.PositionalJob;
 import org.eclipse.smarthome.binding.astro.internal.model.Planet;
 import org.eclipse.smarthome.binding.astro.internal.util.PropertyUtils;
-import org.eclipse.smarthome.core.scheduler.CronScheduler;
-import org.eclipse.smarthome.core.scheduler.ScheduledCompletableFuture;
+import org.eclipse.smarthome.core.scheduler.CronExpression;
+import org.eclipse.smarthome.core.scheduler.ExpressionThreadPoolManager;
+import org.eclipse.smarthome.core.scheduler.ExpressionThreadPoolManager.ExpressionThreadPoolExecutor;
 import org.eclipse.smarthome.core.thing.Channel;
 import org.eclipse.smarthome.core.thing.ChannelUID;
 import org.eclipse.smarthome.core.thing.Thing;
@@ -60,18 +62,17 @@ public abstract class AstroThingHandler extends BaseThingHandler {
     protected final Logger logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
     /** Scheduler to schedule jobs */
-    private final CronScheduler cronScheduler;
+    private final ExpressionThreadPoolExecutor scheduledExecutor;
 
     private int linkedPositionalChannels = 0;
     protected AstroThingConfig thingConfig;
     private final Lock monitor = new ReentrantLock();
-
-    private ScheduledCompletableFuture dailyJob;
+    private Job dailyJob;
     private final Set<ScheduledFuture<?>> scheduledFutures = new HashSet<>();
 
-    public AstroThingHandler(Thing thing, CronScheduler scheduler) {
+    public AstroThingHandler(Thing thing) {
         super(thing);
-        this.cronScheduler = scheduler;
+        scheduledExecutor = ExpressionThreadPoolManager.getExpressionScheduledPool("astro");
     }
 
     @Override
@@ -170,16 +171,16 @@ public abstract class AstroThingHandler extends BaseThingHandler {
             stopJobs();
             if (getThing().getStatus() == ONLINE) {
                 String thingUID = getThing().getUID().toString();
-                if (cronScheduler == null) {
+                if (scheduledExecutor == null) {
                     logger.warn("Thread Pool Executor is not available");
                     return;
                 }
                 // Daily Job
-                Job runnable = getDailyJob();
-                dailyJob = cronScheduler.schedule(runnable, DAILY_MIDNIGHT);
+                dailyJob = getDailyJob();
+                scheduledExecutor.schedule(dailyJob, new CronExpression(DAILY_MIDNIGHT));
                 logger.debug("Scheduled {} at midnight", dailyJob);
                 // Execute daily startup job immediately
-                runnable.run();
+                dailyJob.run();
 
                 // Repeat positional job every configured seconds
                 // Use scheduleAtFixedRate to avoid time drift associated with scheduleWithFixedDelay
@@ -191,6 +192,8 @@ public abstract class AstroThingHandler extends BaseThingHandler {
                     logger.info("Scheduled {} every {} seconds", positionalJob, thingConfig.getInterval());
                 }
             }
+        } catch (ParseException ex) {
+            logger.error("{}", ex.getMessage(), ex);
         } finally {
             monitor.unlock();
         }
@@ -203,9 +206,9 @@ public abstract class AstroThingHandler extends BaseThingHandler {
         logger.debug("Stopping scheduled jobs for thing {}", getThing().getUID());
         monitor.lock();
         try {
-            if (cronScheduler != null) {
+            if (scheduledExecutor != null) {
                 if (dailyJob != null) {
-                    dailyJob.cancel(true);
+                    scheduledExecutor.remove(dailyJob);
                 }
                 dailyJob = null;
             }

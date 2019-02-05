@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,8 +12,8 @@
  */
 package org.eclipse.smarthome.core.cache;
 
-import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
@@ -25,7 +25,6 @@ import org.eclipse.jdt.annotation.Nullable;
  * issue a fetch in another thread and notify callback implementors asynchronously.
  *
  * @author David Graeff - Initial contribution
- * @author Martin van Wingerden - Add Duration constructor
  *
  * @param <V> the type of the cached value
  */
@@ -39,24 +38,14 @@ public class ExpiringCacheAsync<V> {
     /**
      * Create a new instance.
      *
-     * @param expiry the duration in milliseconds for how long the value stays valid. Must be positive.
-     * @throws IllegalArgumentException For an expire value <=0.
-     */
-    public ExpiringCacheAsync(Duration expiry) {
-        if (expiry.isNegative() || expiry.isZero()) {
-            throw new IllegalArgumentException("Cache expire time must be greater than 0");
-        }
-        this.expiry = expiry.toNanos();
-    }
-
-    /**
-     * Create a new instance.
-     *
      * @param expiry the duration in milliseconds for how long the value stays valid. Must be greater than 0.
      * @throws IllegalArgumentException For an expire value <=0.
      */
-    public ExpiringCacheAsync(long expiry) {
-        this(Duration.ofMillis(expiry));
+    public ExpiringCacheAsync(long expiry) throws IllegalArgumentException {
+        if (expiry <= 0) {
+            throw new IllegalArgumentException("Cache expire time must be greater than 0");
+        }
+        this.expiry = TimeUnit.MILLISECONDS.toNanos(expiry);
     }
 
     /**
@@ -100,7 +89,6 @@ public class ExpiringCacheAsync<V> {
      *            if there is already an ongoing refresh.
      * @return the new value in form of a CompletableFuture.
      */
-    @SuppressWarnings({ "null", "unused" })
     public synchronized CompletableFuture<V> refreshValue(Supplier<CompletableFuture<V>> requestNewValueFuture) {
         CompletableFuture<V> currentNewValueRequest = this.currentNewValueRequest;
 

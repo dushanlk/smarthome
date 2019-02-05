@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -96,6 +96,10 @@ import org.osgi.service.component.annotations.ReferencePolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimaps;
+import com.google.common.collect.SetMultimap;
+
 /**
  * {@link ThingManagerImpl} tracks all things in the {@link ThingRegistry} and
  * mediates the communication between the {@link Thing} and the {@link ThingHandler} from the binding. Therefore it
@@ -144,7 +148,8 @@ public class ThingManagerImpl
 
     private final Map<ThingUID, ThingHandler> thingHandlers = new ConcurrentHashMap<>();
 
-    private final Map<ThingHandlerFactory, Set<ThingHandler>> thingHandlersByFactory = new HashMap<>();
+    private final SetMultimap<ThingHandlerFactory, ThingHandler> thingHandlersByFactory = Multimaps
+            .synchronizedSetMultimap(HashMultimap.<ThingHandlerFactory, ThingHandler> create());
 
     private ThingTypeRegistry thingTypeRegistry;
     private ChannelTypeRegistry channelTypeRegistry;
@@ -158,7 +163,7 @@ public class ThingManagerImpl
     private SafeCaller safeCaller;
     private volatile boolean active = false;
     private StorageService storageService;
-    private Storage<String> storage;
+    private Storage<Boolean> storage;
 
     private final ThingHandlerCallback thingHandlerCallback = new ThingHandlerCallback() {
 
@@ -279,9 +284,7 @@ public class ThingManagerImpl
 
         @Override
         public void configurationUpdated(Thing thing) {
-            if (!ThingHandlerHelper.isHandlerInitialized(thing)) {
-                initializeHandler(thing);
-            }
+            initializeHandler(thing);
         }
 
         @Override
@@ -331,7 +334,7 @@ public class ThingManagerImpl
 
         @Override
         public boolean isChannelLinked(ChannelUID channelUID) {
-            return itemChannelLinkRegistry.isLinked(channelUID);
+            return !itemChannelLinkRegistry.getLinks(channelUID).isEmpty();
         }
     };
 
@@ -484,6 +487,7 @@ public class ThingManagerImpl
             }
         }
 
+        storage.remove(thing.getUID().getAsString());
         this.things.remove(thing);
     }
 
@@ -600,10 +604,7 @@ public class ThingManagerImpl
             thingHandler.setCallback(ThingManagerImpl.this.thingHandlerCallback);
             thing.setHandler(thingHandler);
             thingHandlers.put(thing.getUID(), thingHandler);
-            synchronized (thingHandlersByFactory) {
-                thingHandlersByFactory.computeIfAbsent(thingHandlerFactory, unused -> new HashSet<>())
-                        .add(thingHandler);
-            }
+            thingHandlersByFactory.put(thingHandlerFactory, thingHandler);
         } catch (Exception ex) {
             ThingStatusInfo statusInfo = buildStatusInfo(ThingStatus.UNINITIALIZED,
                     ThingStatusDetail.HANDLER_REGISTERING_ERROR,
@@ -633,9 +634,10 @@ public class ThingManagerImpl
     }
 
     private void initializeHandler(Thing thing) {
-        if (isDisabledByStorage(thing.getUID())) {
-            setThingStatus(thing, buildStatusInfo(ThingStatus.UNINITIALIZED, ThingStatusDetail.DISABLED));
+        if (storage != null && storage.containsKey(thing.getUID().getAsString())
+                && !storage.get(thing.getUID().getAsString())) {
             logger.debug("Thing '{}' will not be initialized. It is marked as disabled.", thing.getUID());
+            
             return;
         }
         if (!isHandlerRegistered(thing)) {
@@ -671,7 +673,7 @@ public class ThingManagerImpl
                 doInitializeHandler(thing.getHandler());
             } else {
                 logger.debug("Thing '{}' not initializable, check required configuration parameters.", thing.getUID());
-                setThingStatus(thing,
+                setThingStatus(thing, 
                         buildStatusInfo(ThingStatus.UNINITIALIZED, ThingStatusDetail.HANDLER_CONFIGURATION_PENDING));
             }
         } finally {
@@ -813,21 +815,17 @@ public class ThingManagerImpl
             }
             thing.setHandler(null);
 
-            boolean enabled = !isDisabledByStorage(thing.getUID());
+            boolean enabled = true;
+            if (storage != null && storage.containsKey(thing.getUID().getAsString())
+                    && !storage.get(thing.getUID().getAsString())) {
+                enabled = false;
+            }
 
             ThingStatusDetail detail = enabled ? ThingStatusDetail.HANDLER_MISSING_ERROR : ThingStatusDetail.DISABLED;
 
             setThingStatus(thing, buildStatusInfo(ThingStatus.UNINITIALIZED, detail));
             thingHandlers.remove(thing.getUID());
-            synchronized (thingHandlersByFactory) {
-                final Set<ThingHandler> thingHandlers = thingHandlersByFactory.get(thingHandlerFactory);
-                if (thingHandlers != null) {
-                    thingHandlers.remove(thingHandler);
-                    if (thingHandlers.isEmpty()) {
-                        thingHandlersByFactory.remove(thingHandlerFactory);
-                    }
-                }
-            }
+            thingHandlersByFactory.remove(thingHandlerFactory, thingHandler);
         }, Runnable.class).build().run();
     }
 
@@ -1111,18 +1109,14 @@ public class ThingManagerImpl
     }
 
     private void handleThingHandlerFactoryRemoval(ThingHandlerFactory thingHandlerFactory) {
-        final Set<ThingHandler> handlers;
-        synchronized (thingHandlersByFactory) {
-            handlers = thingHandlersByFactory.remove(thingHandlerFactory);
-        }
-        if (handlers != null) {
-            for (ThingHandler thingHandler : handlers) {
-                final Thing thing = thingHandler.getThing();
-                if (isHandlerRegistered(thing)) {
-                    unregisterAndDisposeHandler(thingHandlerFactory, thing, thingHandler);
-                }
+        Set<ThingHandler> handlers = new HashSet<>(thingHandlersByFactory.get(thingHandlerFactory));
+        for (ThingHandler thingHandler : handlers) {
+            Thing thing = thingHandler.getThing();
+            if (thing != null && isHandlerRegistered(thing)) {
+                unregisterAndDisposeHandler(thingHandlerFactory, thing, thingHandler);
             }
         }
+        thingHandlersByFactory.removeAll(thingHandlerFactory);
     }
 
     private synchronized Lock getLockForThing(ThingUID thingUID) {
@@ -1207,16 +1201,13 @@ public class ThingManagerImpl
     @Override
     public void setEnabled(ThingUID thingUID, boolean enabled) {
         Thing thing = getThing(thingUID);
-
-        persistThingEnableStatus(thingUID, enabled);
-
-        if (thing == null) {
-            logger.debug("Thing with the UID {} is unknown, cannot set its enabled status.", thingUID);
-            return;
-        }
-
         if (enabled) {
             // Enable a thing
+            // Clear the disabled thing storage. Otherwise the handler will NOT be initialized later.
+            if (storage != null) {
+                storage.remove(thingUID.getAsString());
+            }
+
             if (thing.getStatus().equals(ThingStatus.ONLINE)) {
                 logger.debug("Thing {} is already in the required state.", thingUID);
                 return;
@@ -1232,6 +1223,11 @@ public class ThingManagerImpl
                 registerAndInitializeHandler(thing, findThingHandlerFactory(thing.getThingTypeUID()));
             }
         } else {
+            // Mark the thing as disabled in the storage.
+            if (storage != null) {
+                storage.put(thingUID.getAsString(), enabled);
+            }
+
             if (!thing.isEnabled()) {
                 logger.debug("Thing {} is already in the required state.", thingUID);
                 return;
@@ -1247,52 +1243,13 @@ public class ThingManagerImpl
                 // Only set the correct status to the thing. There is no handler to be disposed
                 setThingStatus(thing, buildStatusInfo(ThingStatus.UNINITIALIZED, ThingStatusDetail.DISABLED));
             }
-
-            if (isBridge(thing)) {
-                updateChildThingStatusForDisabledBridges((Bridge) thing);
-            }
-        }
-    }
-
-    private void updateChildThingStatusForDisabledBridges(Bridge bridge) {
-        for (Thing childThing : bridge.getThings()) {
-            ThingStatusDetail statusDetail = childThing.getStatusInfo().getStatusDetail();
-            if (childThing.getStatus() == ThingStatus.UNINITIALIZED && statusDetail != ThingStatusDetail.DISABLED) {
-                setThingStatus(childThing,
-                        buildStatusInfo(ThingStatus.UNINITIALIZED, ThingStatusDetail.BRIDGE_UNINITIALIZED));
-            }
-        }
-    }
-
-    private void persistThingEnableStatus(ThingUID thingUID, boolean enabled) {
-        if (storage == null) {
-            logger.debug("Cannot persist enable status of thing with UID {}. Persistent storage unavailable.", thingUID);
-            return;
-        }
-
-        logger.debug("Thing with UID {} will be persisted as {}.", thingUID, enabled ? "enabled." : "disabled.");
-        if (enabled) {
-            // Clear the disabled thing storage. Otherwise the handler will NOT be initialized later.
-            storage.remove(thingUID.getAsString());
-        } else {
-            // Mark the thing as disabled in the storage.
-            storage.put(thingUID.getAsString(), "");
         }
     }
 
     @Override
-    public boolean isEnabled(ThingUID thingUID) {
+    public Boolean isEnabled(ThingUID thingUID) {
         Thing thing = getThing(thingUID);
-        if (thing != null) {
-            return thing.isEnabled();
-        }
-
-        logger.debug("Thing with UID {} is unknown. Will try to get the enabled status from the persistent storage.");
-        return !isDisabledByStorage(thingUID);
-    }
-
-    private boolean isDisabledByStorage(ThingUID thingUID) {
-        return storage != null && storage.containsKey(thingUID.getAsString());
+        return thing.isEnabled();
     }
 
     @Reference

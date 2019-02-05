@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -254,11 +254,10 @@ public class StructureManagerImpl implements StructureManager {
 
     @Override
     public void updateDevice(int oldZone, List<Short> oldGroups, Device device) {
-        int intOldZoneID = oldZone;
-        if (intOldZoneID == -1) {
-            intOldZoneID = device.getZoneId();
+        if (oldZone == -1) {
+            oldZone = device.getZoneId();
         }
-        deleteDevice(intOldZoneID, oldGroups, device);
+        deleteDevice(oldZone, oldGroups, device);
         addDeviceToStructure(device);
     }
 
@@ -294,17 +293,15 @@ public class StructureManagerImpl implements StructureManager {
     }
 
     private boolean deleteDevice(int zoneID, List<Short> groups, Device device) {
-        List<Short> intGroups = groups;
-        int intZoneID = zoneID;
-        if (intGroups != null || intZoneID >= 0) {
-            if (intGroups == null) {
-                intGroups = device.getGroups();
+        if (groups != null || zoneID >= 0) {
+            if (groups == null) {
+                groups = device.getGroups();
             }
-            if (intZoneID == -1) {
-                intZoneID = device.getZoneId();
+            if (zoneID == -1) {
+                zoneID = device.getZoneId();
             }
-            for (Short groupID : intGroups) {
-                List<Device> deviceList = getReferenceDeviceListFromZoneXGroupX(intZoneID, groupID);
+            for (Short groupID : groups) {
+                List<Device> deviceList = getReferenceDeviceListFromZoneXGroupX(zoneID, groupID);
                 if (deviceList != null) {
                     deviceList.remove(device);
                 }

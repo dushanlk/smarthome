@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -40,11 +40,11 @@ class Util {
         }
     }
 
-    public static List<HueObject> idsToLights(List<String> ids) {
-        List<HueObject> lights = new ArrayList<>();
+    public static List<Light> idsToLights(List<String> ids) {
+        List<Light> lights = new ArrayList<>();
 
         for (String id : ids) {
-            HueObject light = new HueObject();
+            Light light = new Light();
             light.setId(id);
             lights.add(light);
         }
@@ -52,10 +52,10 @@ class Util {
         return lights;
     }
 
-    public static List<String> lightsToIds(List<HueObject> lights) {
+    public static List<String> lightsToIds(List<Light> lights) {
         List<String> ids = new ArrayList<>();
 
-        for (HueObject light : lights) {
+        for (Light light : lights) {
             ids.add(light.getId());
         }
 

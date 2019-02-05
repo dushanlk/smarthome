@@ -136,7 +136,6 @@ SI:
 | Pressure               | hectoPascal             | hPa    |
 | Pressure               | Millimetre of Mercury   | mmHg   |
 | Pressure               | Bar                     | bar    |
-| Pressure               | milliBar                | mbar   |
 | Radioactivity          | Becquerel               | Bq     |
 | RadiationDoseAbsorbed  | Gray                    | Gy     |
 | RadiationDoseEffective | Sievert                 | Sv     |

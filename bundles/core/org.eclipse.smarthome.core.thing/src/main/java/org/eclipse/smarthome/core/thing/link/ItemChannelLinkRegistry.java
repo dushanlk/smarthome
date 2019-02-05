@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,9 +12,10 @@
  */
 package org.eclipse.smarthome.core.thing.link;
 
-import java.util.Objects;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.eclipse.smarthome.core.events.EventPublisher;
 import org.eclipse.smarthome.core.items.Item;
@@ -36,7 +37,6 @@ import org.osgi.service.component.annotations.ReferencePolicy;
  *
  * @author Dennis Nobel - Initial contribution
  * @author Markus Rathgeb - Linked items returns only existing items
- * @author Markus Rathgeb - Rewrite collection handling to improve performance
  *
  */
 @Component(immediate = true, service = ItemChannelLinkRegistry.class)
@@ -53,41 +53,70 @@ public class ItemChannelLinkRegistry extends AbstractLinkRegistry<ItemChannelLin
      * Returns a set of bound channels for the given item name.
      *
      * @param itemName item name
-     * @return an unmodifiable set of bound channels for the given item name
+     * @return set of bound channels for the given item name
      */
-    public Set<ChannelUID> getBoundChannels(final String itemName) {
-        return getLinks(itemName).parallelStream().map(link -> link.getLinkedUID()).collect(Collectors.toSet());
+    public Set<ChannelUID> getBoundChannels(String itemName) {
+        Set<ChannelUID> channelUIDs = new HashSet<>();
+
+        for (ItemChannelLink itemChannelLink : getAll()) {
+            if (itemChannelLink.getItemName().equals(itemName)) {
+                channelUIDs.add(itemChannelLink.getLinkedUID());
+            }
+        }
+
+        return channelUIDs;
     }
 
     @Override
-    public Set<String> getLinkedItemNames(final UID uid) {
-        return super.getLinkedItemNames(uid).parallelStream().filter(itemName -> itemRegistry.get(itemName) != null)
-                .collect(Collectors.toSet());
+    public Set<String> getLinkedItemNames(UID uid) {
+        final Set<String> linkedItems = new LinkedHashSet<>();
+        for (final AbstractLink link : getAll()) {
+            final String itemName = link.getItemName();
+            if (link.getLinkedUID().equals(uid) && itemRegistry.get(itemName) != null) {
+                linkedItems.add(itemName);
+            }
+        }
+        return linkedItems;
     }
 
-    public Set<Item> getLinkedItems(final UID uid) {
-        return super.getLinkedItemNames(uid).parallelStream().map(itemName -> itemRegistry.get(itemName))
-                .filter(Objects::nonNull).collect(Collectors.toSet());
+    public Set<Item> getLinkedItems(UID uid) {
+        final Set<Item> linkedItems = new LinkedHashSet<>();
+        for (final AbstractLink link : getAll()) {
+            final String itemName = link.getItemName();
+            Item item = itemRegistry.get(itemName);
+            if (link.getLinkedUID().equals(uid) && item != null) {
+                linkedItems.add(item);
+            }
+        }
+        return linkedItems;
     }
 
     /**
      * Returns a set of bound things for the given item name.
      *
      * @param itemName item name
-     * @return an unmodifiable set of bound things for the given item name
+     * @return set of bound things for the given item name
      */
-    public Set<Thing> getBoundThings(final String itemName) {
-        return getBoundChannels(itemName).parallelStream()
-                .map(channelUID -> thingRegistry.get(channelUID.getThingUID())).filter(Objects::nonNull)
-                .collect(Collectors.toSet());
+    public Set<Thing> getBoundThings(String itemName) {
+        Set<Thing> things = new HashSet<>();
+        Collection<ChannelUID> boundChannels = getBoundChannels(itemName);
+
+        for (ChannelUID channelUID : boundChannels) {
+            Thing thing = thingRegistry.get(channelUID.getThingUID());
+            if (thing != null) {
+                things.add(thing);
+            }
+        }
+
+        return things;
     }
 
     @Reference
-    protected void setThingRegistry(final ThingRegistry thingRegistry) {
+    protected void setThingRegistry(ThingRegistry thingRegistry) {
         this.thingRegistry = thingRegistry;
     }
 
-    protected void unsetThingRegistry(final ThingRegistry thingRegistry) {
+    protected void unsetThingRegistry(ThingRegistry thingRegistry) {
         this.thingRegistry = null;
     }
 
@@ -101,45 +130,47 @@ public class ItemChannelLinkRegistry extends AbstractLinkRegistry<ItemChannelLin
     }
 
     @Reference
-    protected void setManagedProvider(final ManagedItemChannelLinkProvider provider) {
+    protected void setManagedProvider(ManagedItemChannelLinkProvider provider) {
         super.setManagedProvider(provider);
     }
 
-    protected void unsetManagedProvider(final ManagedItemChannelLinkProvider provider) {
-        super.unsetManagedProvider(provider);
+    protected void unsetManagedProvider(ManagedItemChannelLinkProvider provider) {
+        super.removeManagedProvider(provider);
     }
 
     @Override
     @Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC)
-    protected void setEventPublisher(final EventPublisher eventPublisher) {
+    protected void setEventPublisher(EventPublisher eventPublisher) {
         super.setEventPublisher(eventPublisher);
     }
 
     @Override
-    protected void unsetEventPublisher(final EventPublisher eventPublisher) {
+    protected void unsetEventPublisher(EventPublisher eventPublisher) {
         super.unsetEventPublisher(eventPublisher);
     }
 
-    public void removeLinksForThing(final ThingUID thingUID) {
-        ((ManagedItemChannelLinkProvider) getManagedProvider()
-                .orElseThrow(() -> new IllegalStateException("ManagedProvider is not available")))
-                        .removeLinksForThing(thingUID);
+    public void removeLinksForThing(ThingUID thingUID) {
+        if (this.managedProvider != null) {
+            ((ManagedItemChannelLinkProvider) this.managedProvider).removeLinksForThing(thingUID);
+        } else {
+            throw new IllegalStateException("ManagedProvider is not available");
+        }
     }
 
     @Override
-    protected void notifyListenersAboutAddedElement(final ItemChannelLink element) {
+    protected void notifyListenersAboutAddedElement(ItemChannelLink element) {
         super.notifyListenersAboutAddedElement(element);
         postEvent(LinkEventFactory.createItemChannelLinkAddedEvent(element));
     }
 
     @Override
-    protected void notifyListenersAboutRemovedElement(final ItemChannelLink element) {
+    protected void notifyListenersAboutRemovedElement(ItemChannelLink element) {
         super.notifyListenersAboutRemovedElement(element);
         postEvent(LinkEventFactory.createItemChannelLinkRemovedEvent(element));
     }
 
     @Override
-    protected void notifyListenersAboutUpdatedElement(final ItemChannelLink oldElement, final ItemChannelLink element) {
+    protected void notifyListenersAboutUpdatedElement(ItemChannelLink oldElement, ItemChannelLink element) {
         super.notifyListenersAboutUpdatedElement(oldElement, element);
         // it is not needed to send an event, because links can not be updated
     }

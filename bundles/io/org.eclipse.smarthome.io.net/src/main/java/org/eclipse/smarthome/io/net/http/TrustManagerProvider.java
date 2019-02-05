@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,17 +20,16 @@ import org.eclipse.jdt.annotation.NonNullByDefault;
 
 /**
  * Service to get custom trust managers for a given endpoint
- *
- * @author Michael Bock - Initial contribution
+ * 
+ * @author Michael Bock - initial API
  */
 @NonNullByDefault
-@Deprecated
 public interface TrustManagerProvider {
 
     /**
      * Provides a (potentially empty) list of trust managers to be used for an endpoint.
      * If the list is empty, the default java trust managers should be used.
-     *
+     * 
      * @param endpoint the desired endpoint, protocol and host are sufficient
      * @return a (potentially empty) list of trust managers
      */

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,12 +13,10 @@
 package org.eclipse.smarthome.config.core;
 
 import static org.hamcrest.CoreMatchers.*;
-import static org.hamcrest.core.IsCollectionContaining.hasItems;
 import static org.junit.Assert.assertThat;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,7 +43,6 @@ public class ConfigurationTest {
         public int intField;
         public boolean booleanField;
         public String stringField = "somedefault";
-        public List<String> listField;
         @SuppressWarnings("unused")
         private static final String CONSTANT = "SOME_CONSTANT";
     }
@@ -57,7 +54,6 @@ public class ConfigurationTest {
         configuration.put("booleanField", false);
         configuration.put("stringField", "test");
         configuration.put("enumField", "ON");
-        configuration.put("listField", Arrays.asList("one", "two", "three"));
         configuration.put("notExisitingProperty", true);
 
         ConfigClass configClass = configuration.as(ConfigClass.class);
@@ -66,7 +62,6 @@ public class ConfigurationTest {
         assertThat(configClass.booleanField, is(false));
         assertThat(configClass.stringField, is("test"));
         assertThat(configClass.enumField, is(ConfigClass.MyEnum.ON));
-        assertThat(configClass.listField, is(hasItems("one", "two", "three")));
     }
 
     @Test
@@ -147,15 +142,5 @@ public class ConfigurationTest {
         Configuration configuration = new Configuration();
         configuration.put("intField", 1);
         assertThat(configuration.get("intField"), is(equalTo(BigDecimal.ONE)));
-    }
-
-    @Test
-    public void assertSingleValueListMapping() {
-        Configuration configuration = new Configuration();
-        configuration.put("listField", "one");
-
-        ConfigClass configClass = configuration.as(ConfigClass.class);
-
-        assertThat(configClass.listField, is(hasItems("one")));
     }
 }

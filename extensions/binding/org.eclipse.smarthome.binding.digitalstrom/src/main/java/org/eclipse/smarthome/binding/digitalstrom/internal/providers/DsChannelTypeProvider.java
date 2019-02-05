@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -35,7 +35,6 @@ import org.eclipse.smarthome.core.i18n.TranslationProvider;
 import org.eclipse.smarthome.core.thing.type.ChannelGroupType;
 import org.eclipse.smarthome.core.thing.type.ChannelGroupTypeUID;
 import org.eclipse.smarthome.core.thing.type.ChannelType;
-import org.eclipse.smarthome.core.thing.type.ChannelTypeBuilder;
 import org.eclipse.smarthome.core.thing.type.ChannelTypeProvider;
 import org.eclipse.smarthome.core.thing.type.ChannelTypeUID;
 import org.eclipse.smarthome.core.types.StateDescription;
@@ -486,17 +485,14 @@ public class DsChannelTypeProvider extends BaseDsI18n implements ChannelTypeProv
             String channelID = channelTypeUID.getId();
             try {
                 SensorEnum sensorType = SensorEnum.valueOf(channelTypeUID.getId().toUpperCase());
-                return ChannelTypeBuilder.state(channelTypeUID, getLabelText(channelID, locale), NUMBER)
-                        .withDescription(getDescText(channelID, locale)).withCategory(getSensorCategory(sensorType))
-                        .withTags(getSimpleTags(channelID, locale))
-                        .withStateDescription(getSensorStateDescription(sensorType)).build();
+                return new ChannelType(channelTypeUID, false, NUMBER, getLabelText(channelID, locale),
+                        getDescText(channelID, locale), getSensorCategory(sensorType), getSimpleTags(channelID, locale),
+                        getSensorStateDescription(sensorType), null);
             } catch (IllegalArgumentException e) {
                 if (supportedOutputChannelTypes.contains(channelID)) {
-                    return ChannelTypeBuilder
-                            .state(channelTypeUID, getLabelText(channelID, locale), getItemType(channelID))
-                            .withDescription(getDescText(channelID, locale)).withCategory(getCategory(channelID))
-                            .withTags(getTags(channelID, locale))
-                            .withStateDescription(getStageDescription(channelID, locale)).build();
+                    return new ChannelType(channelTypeUID, false, getItemType(channelID),
+                            getLabelText(channelID, locale), getDescText(channelID, locale), getCategory(channelID),
+                            getTags(channelID, locale), getStageDescription(channelID, locale), null);
                 }
                 MeteringTypeEnum meteringType = getMeteringType(channelID);
                 if (meteringType != null) {
@@ -505,21 +501,18 @@ public class DsChannelTypeProvider extends BaseDsI18n implements ChannelTypeProv
                     if (MeteringTypeEnum.CONSUMPTION.equals(meteringType)) {
                         pattern = "%d W";
                     }
-                    return ChannelTypeBuilder.state(channelTypeUID, getLabelText(channelID, locale), NUMBER)
-                            .withDescription(getDescText(channelID, locale)).withCategory(CATEGORY_ENERGY)
-                            .withTags(
-                                    new HashSet<>(Arrays.asList(getLabelText(channelID, locale), getText(DS, locale))))
-                            .withStateDescription(new StateDescription(null, null, null, pattern, true, null)).build();
+                    return new ChannelType(channelTypeUID, false, NUMBER, getLabelText(channelID, locale),
+                            getDescText(channelID, locale), CATEGORY_ENERGY,
+                            new HashSet<>(Arrays.asList(getLabelText(channelID, locale), getText(DS, locale))),
+                            new StateDescription(null, null, null, pattern, true, null), null);
                 }
                 try {
                     DeviceBinarayInputEnum binarayInputType = DeviceBinarayInputEnum
                             .valueOf(channelTypeUID.getId().replaceAll(BINARY_INPUT_PRE + SEPERATOR, "").toUpperCase());
-                    return ChannelTypeBuilder
-                            .state(channelTypeUID, getLabelText(channelID, locale), getItemType(channelID))
-                            .withDescription(getDescText(channelID, locale))
-                            .withCategory(getBinaryInputCategory(binarayInputType))
-                            .withTags(getSimpleTags(channelTypeUID.getId(), locale))
-                            .withStateDescription(new StateDescription(null, null, null, null, true, null)).build();
+                    return new ChannelType(channelTypeUID, false, getItemType(channelID),
+                            getLabelText(channelID, locale), getDescText(channelID, locale),
+                            getBinaryInputCategory(binarayInputType), getSimpleTags(channelTypeUID.getId(), locale),
+                            new StateDescription(null, null, null, null, true, null), null);
                 } catch (IllegalArgumentException e1) {
                     // ignore
                 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -55,8 +55,8 @@ import org.slf4j.LoggerFactory;
  *
  * For advanced usage direct use of the Jetty client is preferred
  *
- * @author Kai Kreuzer - Initial contribution
- * @author Thomas Eichstaedt-Engelen - Initial contribution
+ * @author Thomas Eichstaedt-Engelen
+ * @author Kai Kreuzer - Initial contribution and API
  * @author Svilen Valkanov - replaced Apache HttpClient with Jetty
  */
 @Component(immediate = true)
@@ -186,6 +186,7 @@ public class HttpUtil {
     private static ContentResponse executeUrlAndGetReponse(String httpMethod, String url, Properties httpHeaders,
             InputStream content, String contentType, int timeout, String proxyHost, Integer proxyPort, String proxyUser,
             String proxyPassword, String nonProxyHosts) throws IOException {
+
         // Referenced http client factory not available
         if (httpClientFactory == null) {
             throw new IllegalStateException("Http client factory not available");

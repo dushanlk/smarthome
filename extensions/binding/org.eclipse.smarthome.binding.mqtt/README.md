@@ -1,21 +1,22 @@
 # MQTT Binding
 
-> MQTT is a machine-to-machine (M2M)/"Internet of Things" connectivity protocol.
-> It was designed as an extremely lightweight publish/subscribe messaging transport.
+    MQTT is a machine-to-machine (M2M)/"Internet of Things" connectivity protocol.
+    It was designed as an extremely lightweight publish/subscribe messaging transport.
 
 MQTT is a server/client architecture.
 A server, also called broker is not provided within this binding,
 but it allows to detect running brokers and to manage connections.
 The hereby configured broker connections make it possible to link MQTT topics to Things and Channels.
 
-It has the following extensions:
-
-<!--list-subs-->
-
 ## Supported Bridges
 
-* Broker: This bridge represents an MQTT Broker connection, configured and managed by this binding.
+* Broker: This bridge represents a MQTT Broker connection, configured and managed by this binding.
 * SystemBroker: A system configured broker cannot be changed by this binding and will be listed as read-only system-broker.
+
+## Discovery
+
+A best-effort subnet port scanner allows to find running MQTT brokers in the same network segment.
+It scans the localhost and a /8 subnet on each IPv4 network interface for typical MQTT server ports on 1883 and 8883 (SSL).
 
 ## Bridge Configuration
  
@@ -52,17 +53,6 @@ For more security, the following optional parameters can be altered:
 * __certificate__: The certificate hash. If **certificatepin** is set this hash is used to verify the connection. Clear to allow a new certificate pinning on the next connection attempt. If empty will be filled automatically by the next successful connection. An example input would be `SHA-256:83F9171E06A313118889F7D79302BD1B7A2042EE0CFD029ABF8DD06FFA6CD9D3`.
 * __publickey__: The public key hash. If **publickeypin** is set this hash is used to verify the connection. Clear to allow a new public key pinning on the next connection attempt. If empty will be filled automatically by the next successful connection. An example input would be `SHA-256:83F9171E06A313118889F7D79302BD1B7A2042EE0CFD029ABF8DD06FFA6CD9D3`.
 
-## Supported Channels
-
-You can extend your broker connection bridges with a channel:
-
-* __publishTrigger__: This channel is triggered when a value is published to the configured MQTT topic on this broker connection. The event payload will be the received MQTT topic value.
-
-Configuration parameters are:
-
-* __stateTopic__: This channel will trigger on this MQTT topic. This topic can contain wildcards like + and # for example "all/in/#" or "sensors/+/config".
-* __payload__: An optional condition on the value of the MQTT topic that must match before this channel is triggered.
-
 ## Full Example
 
 In a first example a very secure connection to a broker is defined. It pins the returned certificate and public key.
@@ -72,7 +62,6 @@ Be aware that if your brokers certificate changes, you need to remove the connec
 The second connection is a plain, unsecured one. Use this only for local MQTT Brokers.
 
 A third connection uses a username and password for authentication.
-Secure is set to false as the username and password is requested by the broker.
 The credentials are plain values on the wire, therefore you should only use this on a secure connection.
 
 In a forth connection, the public key pinning is enabled again.
@@ -83,10 +72,11 @@ in [Java MessageDigest Algorithms](https://docs.oracle.com/javase/9/docs/specs/s
 `mqttConnections.things`:
 
 ```xtend
-mqtt:broker:mySecureBroker [ host="192.168.0.41", secure=true, certificatepin=true, publickeypin=true ]
-mqtt:broker:myUnsecureBroker [ host="192.168.0.42", secure=false ]
+mqtt:broker:mySecureBroker [ host="192.168.0.41",secure="ON", certificatepin=true, publickeypin=true ]
+mqtt:broker:myUnsecureBroker [ host="192.168.0.42",secure="OFF" ]
 
-mqtt:broker:myAuthentificatedBroker [ host="192.168.0.43", secure=false, username="user", password="password" ]
+mqtt:broker:myAuthentificatedBroker [ host="192.168.0.43", username="user", password="password" ]
 
-mqtt:broker:pinToPublicKey [ host="192.168.0.44", secure=true, publickeypin=true, publickey="SHA-256:9a6f30e67ae9723579da2575c35daf7da3b370b04ac0bde031f5e1f5e4617eb8" ]
+mqtt:broker:pinToPublicKey [ host="192.168.0.44", publickeypin=true, publickey="SHA-256:9a6f30e67ae9723579da2575c35daf7da3b370b04ac0bde031f5e1f5e4617eb8" ]
+
 ```

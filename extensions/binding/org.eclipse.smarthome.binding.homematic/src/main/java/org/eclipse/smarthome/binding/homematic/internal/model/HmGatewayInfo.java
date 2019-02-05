@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -29,7 +29,6 @@ public class HmGatewayInfo {
     private String type;
     private String firmware;
     private String address;
-    private boolean rfInterface;
     private boolean wiredInterface;
     private boolean cuxdInterface;
     private boolean hmipInterface;
@@ -168,25 +167,10 @@ public class HmGatewayInfo {
         this.groupInterface = groupInterface;
     }
 
-    /**
-     * Returns true, if the gateway supports the RF interface.
-     */
-    public boolean isRfInterface() {
-        return rfInterface;
-    }
-
-    /**
-     * Sets the RF support of the gateway.
-     */
-    public void setRfInterface(boolean rfInterface) {
-        this.rfInterface = rfInterface;
-    }
-
     @Override
     public String toString() {
         return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE).append("id", id).append("type", type)
-                .append("firmware", firmware).append("address", address).append("rf", rfInterface)
-                .append("wired", wiredInterface).append("hmip", hmipInterface).append("cuxd", cuxdInterface)
-                .append("group", groupInterface).toString();
+                .append("firmware", firmware).append("address", address).append("wired", wiredInterface)
+                .append("hmip", hmipInterface).append("cuxd", cuxdInterface).append("group", groupInterface).toString();
     }
 }

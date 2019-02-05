@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -219,14 +219,13 @@ public class HttpTransportImpl implements HttpTransport {
     }
 
     private String fixURI(String uri) {
-        String fixedURI = uri;
-        if (!fixedURI.startsWith("https://")) {
-            fixedURI = "https://" + fixedURI;
+        if (!uri.startsWith("https://")) {
+            uri = "https://" + uri;
         }
-        if (fixedURI.split(":").length != 3) {
-            fixedURI = fixedURI + ":8080";
+        if (uri.split(":").length != 3) {
+            uri = uri + ":8080";
         }
-        return fixedURI;
+        return uri;
     }
 
     private String fixRequest(String request) {
@@ -249,39 +248,31 @@ public class HttpTransportImpl implements HttpTransport {
         String response = null;
         HttpsURLConnection connection = null;
         try {
-            String correctedRequest = checkSessionToken(request);
-            connection = getConnection(correctedRequest, connectTimeout, readTimeout);
+            request = checkSessionToken(request);
+            connection = getConnection(request, connectTimeout, readTimeout);
             if (connection != null) {
                 connection.connect();
-                final int responseCode = connection.getResponseCode();
-                if (responseCode != HttpURLConnection.HTTP_FORBIDDEN) {
-                    if (responseCode == HttpURLConnection.HTTP_INTERNAL_ERROR) {
-                        response = IOUtils.toString(connection.getErrorStream());
-                    } else {
-                        response = IOUtils.toString(connection.getInputStream());
-                    }
-                    if (response != null) {
-                        if (!response.contains("Authentication failed")) {
-                            if (loginCounter > 0) {
-                                connectionManager.checkConnection(responseCode);
-                            }
-                            loginCounter = 0;
-                        } else {
-                            connectionManager.checkConnection(ConnectionManager.AUTHENTIFICATION_PROBLEM);
-                            loginCounter++;
+                if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
+                    response = IOUtils.toString(connection.getInputStream());
+                    if (!response.contains("Authentication failed")) {
+                        if (loginCounter > 0) {
+                            connectionManager.checkConnection(connection.getResponseCode());
                         }
+                        loginCounter = 0;
+                    } else {
+                        connectionManager.checkConnection(ConnectionManager.AUTHENTIFICATION_PROBLEM);
+                        loginCounter++;
                     }
-
                 }
                 connection.disconnect();
                 if (response == null && connectionManager != null
                         && loginCounter <= MAY_A_NEW_SESSION_TOKEN_IS_NEEDED) {
-                    if (responseCode == HttpURLConnection.HTTP_FORBIDDEN) {
-                        execute(addSessionToken(correctedRequest, connectionManager.getNewSessionToken()),
-                                connectTimeout, readTimeout);
+                    if (connection.getResponseCode() == HttpURLConnection.HTTP_FORBIDDEN) {
+                        execute(addSessionToken(request, connectionManager.getNewSessionToken()), connectTimeout,
+                                readTimeout);
                         loginCounter++;
                     } else {
-                        connectionManager.checkConnection(responseCode);
+                        connectionManager.checkConnection(connection.getResponseCode());
                         loginCounter++;
                         return null;
                     }
@@ -297,7 +288,6 @@ public class HttpTransportImpl implements HttpTransport {
         } catch (java.net.UnknownHostException e) {
             informConnectionManager(ConnectionManager.UNKNOWN_HOST_EXCEPTION);
         } catch (IOException e) {
-            logger.error("An IOException occurred: ", e);
             if (connectionManager != null) {
                 informConnectionManager(ConnectionManager.GENERAL_EXCEPTION);
             }
@@ -336,26 +326,25 @@ public class HttpTransportImpl implements HttpTransport {
     }
 
     private String addSessionToken(String request, String sessionToken) {
-        String correctedRequest = request;
-        if (!correctedRequest.contains(ParameterKeys.TOKEN)) {
-            if (correctedRequest.contains("?")) {
-                correctedRequest = correctedRequest + "&" + ParameterKeys.TOKEN + "=" + sessionToken;
+        if (!request.contains(ParameterKeys.TOKEN)) {
+            if (request.contains("?")) {
+                request = request + "&" + ParameterKeys.TOKEN + "=" + sessionToken;
             } else {
-                correctedRequest = correctedRequest + "?" + ParameterKeys.TOKEN + "=" + sessionToken;
+                request = request + "?" + ParameterKeys.TOKEN + "=" + sessionToken;
             }
         } else {
-            correctedRequest = StringUtils.replaceOnce(correctedRequest, StringUtils.substringBefore(
-                    StringUtils.substringAfter(correctedRequest, ParameterKeys.TOKEN + "="), "&"), sessionToken);
+            request = StringUtils.replaceOnce(request,
+                    StringUtils.substringBefore(StringUtils.substringAfter(request, ParameterKeys.TOKEN + "="), "&"),
+                    sessionToken);
 
         }
-        return correctedRequest;
+        return request;
     }
 
     private HttpsURLConnection getConnection(String request, int connectTimeout, int readTimeout) throws IOException {
-        String correctedRequest = request;
-        if (StringUtils.isNotBlank(correctedRequest)) {
-            correctedRequest = fixRequest(correctedRequest);
-            URL url = new URL(this.uri + correctedRequest);
+        if (StringUtils.isNotBlank(request)) {
+            request = fixRequest(request);
+            URL url = new URL(this.uri + request);
             HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
             if (connection != null) {
                 connection.setConnectTimeout(connectTimeout);
@@ -444,16 +433,16 @@ public class HttpTransportImpl implements HttpTransport {
 
     @Override
     public String writePEMCertFile(String path) {
-        String correctedPath = StringUtils.trimToEmpty(path);
+        path = StringUtils.trimToEmpty(path);
         File certFilePath;
-        if (StringUtils.isNotBlank(correctedPath)) {
-            certFilePath = new File(correctedPath);
+        if (StringUtils.isNotBlank(path)) {
+            certFilePath = new File(path);
             boolean pathExists = certFilePath.exists();
             if (!pathExists) {
                 pathExists = certFilePath.mkdirs();
             }
-            if (pathExists && !correctedPath.endsWith("/")) {
-                correctedPath = correctedPath + "/";
+            if (pathExists && !path.endsWith("/")) {
+                path = path + "/";
             }
         }
         InputStream certInputStream = IOUtils.toInputStream(cert);
@@ -462,8 +451,7 @@ public class HttpTransportImpl implements HttpTransport {
             trustedCert = (X509Certificate) CertificateFactory.getInstance("X.509")
                     .generateCertificate(certInputStream);
 
-            certFilePath = new File(
-                    correctedPath + trustedCert.getSubjectDN().getName().split(",")[0].substring(2) + ".crt");
+            certFilePath = new File(path + trustedCert.getSubjectDN().getName().split(",")[0].substring(2) + ".crt");
             if (!certFilePath.exists()) {
                 certFilePath.createNewFile();
                 FileWriter writer = new FileWriter(certFilePath, true);

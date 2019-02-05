@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,14 +20,14 @@ package org.eclipse.smarthome.binding.hue.internal;
  */
 public class State {
     private boolean on;
-    int bri;
-    int hue;
-    int sat;
+    protected int bri;
+    private int hue;
+    private int sat;
     private float[] xy;
     private int ct;
     private String alert;
     private String effect;
-    String colormode;
+    private String colormode;
     private boolean reachable;
 
     State() {

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,7 +13,6 @@
 package org.eclipse.smarthome.binding.lifx.internal;
 
 import static org.eclipse.smarthome.binding.lifx.LifxBindingConstants.MIN_ZONE_INDEX;
-import static org.eclipse.smarthome.binding.lifx.internal.protocol.Product.Feature.*;
 import static org.eclipse.smarthome.binding.lifx.internal.util.LifxMessageUtil.infraredToPercentType;
 
 import java.util.concurrent.ScheduledExecutorService;
@@ -30,7 +29,7 @@ import org.eclipse.smarthome.binding.lifx.internal.protocol.GetLightInfraredRequ
 import org.eclipse.smarthome.binding.lifx.internal.protocol.GetRequest;
 import org.eclipse.smarthome.binding.lifx.internal.protocol.GetWifiInfoRequest;
 import org.eclipse.smarthome.binding.lifx.internal.protocol.Packet;
-import org.eclipse.smarthome.binding.lifx.internal.protocol.Product;
+import org.eclipse.smarthome.binding.lifx.internal.protocol.Products;
 import org.eclipse.smarthome.binding.lifx.internal.protocol.StateLightInfraredResponse;
 import org.eclipse.smarthome.binding.lifx.internal.protocol.StateLightPowerResponse;
 import org.eclipse.smarthome.binding.lifx.internal.protocol.StateMultiZoneResponse;
@@ -55,7 +54,7 @@ public class LifxLightCurrentStateUpdater {
     private final Logger logger = LoggerFactory.getLogger(LifxLightCurrentStateUpdater.class);
 
     private final String logId;
-    private final Product product;
+    private final Products product;
     private final CurrentLightState currentLightState;
     private final ScheduledExecutorService scheduler;
     private final LifxLightCommunicationHandler communicationHandler;
@@ -131,10 +130,10 @@ public class LifxLightCurrentStateUpdater {
     private void sendLightStateRequests() {
         communicationHandler.sendPacket(new GetRequest());
 
-        if (product.hasFeature(INFRARED)) {
+        if (product.isInfrared()) {
             communicationHandler.sendPacket(new GetLightInfraredRequest());
         }
-        if (product.hasFeature(MULTIZONE)) {
+        if (product.isMultiZone()) {
             communicationHandler.sendPacket(new GetColorZonesRequest());
         }
         if (updateSignalStrength) {

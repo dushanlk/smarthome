@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,7 +14,6 @@ package org.eclipse.smarthome.auth.oauth2client.test.internal;
 
 import java.io.IOException;
 import java.util.Map;
-import java.util.UUID;
 
 import org.eclipse.smarthome.core.auth.client.oauth2.AccessTokenResponse;
 import org.eclipse.smarthome.core.auth.client.oauth2.OAuthClientService;
@@ -32,33 +31,33 @@ import org.slf4j.LoggerFactory;
  */
 public abstract class AbstractTestAgent implements TestAgent {
 
-    private final Logger logger = LoggerFactory.getLogger(AbstractTestAgent.class);
+    protected String TOKEN_URL;
+    protected String CLIENT_ID;
 
-    public String handle;
+    protected String AUTH_URL;
+    protected String REDIRECT_URI;
 
-    protected String tokenUrl;
-    protected String clientId;
+    protected String CLIENT_SECRET;
+    protected String USERNAME;
+    protected String PASSWORD;
+    protected String SCOPE;
 
-    protected String authUrl;
-    protected String redirectUri;
-
-    protected String clientSecret;
-    protected String username;
-    protected String password;
-    protected String scope;
+    private static final Logger logger = LoggerFactory.getLogger(AbstractTestAgent.class);
 
     protected OAuthFactory oauthFactory;
+
     protected OAuthClientService oauthClientService;
+    protected String handle;
 
     public void activate(Map<String, Object> properties) {
-        tokenUrl = getProperty(properties, "TOKEN_URL");
-        clientId = getProperty(properties, "CLIENT_ID");
-        authUrl = getProperty(properties, "AUTH_URL");
-        redirectUri = getProperty(properties, "REDIRECT_URI");
-        clientSecret = getProperty(properties, "CLIENT_SECRET");
-        username = getProperty(properties, "USERNAME");
-        password = getProperty(properties, "PASSWORD");
-        scope = getProperty(properties, "SCOPE");
+        TOKEN_URL = getProperty(properties, "TOKEN_URL");
+        CLIENT_ID = getProperty(properties, "CLIENT_ID");
+        AUTH_URL = getProperty(properties, "AUTH_URL");
+        REDIRECT_URI = getProperty(properties, "REDIRECT_URI");
+        CLIENT_SECRET = getProperty(properties, "CLIENT_SECRET");
+        USERNAME = getProperty(properties, "USERNAME");
+        PASSWORD = getProperty(properties, "PASSWORD");
+        SCOPE = getProperty(properties, "SCOPE");
     }
 
     private static String getProperty(Map<String, Object> properties, String propKey) {
@@ -88,13 +87,11 @@ public abstract class AbstractTestAgent implements TestAgent {
     }
 
     @Override
-    public OAuthClientService testCreateClient() {
+    public String testCreateClient() {
         logger.debug("test createClient");
-        handle = UUID.randomUUID().toString();
-        OAuthClientService service = oauthFactory.createOAuthClientService(handle, tokenUrl, authUrl, clientId,
-                clientSecret, scope, false);
+        handle = oauthFactory.createOAuthClientService(TOKEN_URL, AUTH_URL, CLIENT_ID, CLIENT_SECRET, SCOPE, false);
         logger.info("new client handle: {}", handle);
-        return service;
+        return handle;
     }
 
     @Override
@@ -122,13 +119,13 @@ public abstract class AbstractTestAgent implements TestAgent {
 
         if (handle == null) {
             logger.debug("Creating new oauth service");
-            oauthClientService = testCreateClient();
-        } else {
-            logger.debug("getting oauth client by handle: {}", handle);
-            oauthClientService = oauthFactory.getOAuthClientService(handle);
+            handle = oauthFactory.createOAuthClientService(TOKEN_URL, AUTH_URL, CLIENT_ID, CLIENT_SECRET, SCOPE, false);
         }
+        logger.debug("getting oauth client by handle: {}", handle);
+        oauthClientService = oauthFactory.getOAuthClientService(handle);
+
         AccessTokenResponse accessTokenResponse = oauthClientService
-                .getAccessTokenByResourceOwnerPasswordCredentials(username, password, scope);
+                .getAccessTokenByResourceOwnerPasswordCredentials(USERNAME, PASSWORD, SCOPE);
         logger.debug("Token: {}", accessTokenResponse);
         return accessTokenResponse;
     }
@@ -136,7 +133,7 @@ public abstract class AbstractTestAgent implements TestAgent {
     @Override
     public AccessTokenResponse testGetAccessTokenByAuthorizationCode(String code)
             throws OAuthException, IOException, OAuthResponseException {
-        return oauthClientService.getAccessTokenResponseByAuthorizationCode(code, redirectUri);
+        return oauthClientService.getAccessTokenResponseByAuthorizationCode(code, REDIRECT_URI);
     }
 
     @Override
@@ -156,7 +153,7 @@ public abstract class AbstractTestAgent implements TestAgent {
     @Override
     public String testGetAuthorizationUrl(String state) throws OAuthException {
         logger.debug("test getAuthorizationUrl {}", state);
-        String authorizationURL = oauthClientService.getAuthorizationUrl(redirectUri, scope, state);
+        String authorizationURL = oauthClientService.getAuthorizationUrl(REDIRECT_URI, SCOPE, state);
         return authorizationURL;
     }
 

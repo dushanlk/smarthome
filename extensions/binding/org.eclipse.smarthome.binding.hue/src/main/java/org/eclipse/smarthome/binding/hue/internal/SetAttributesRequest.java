@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -28,11 +28,11 @@ class SetAttributesRequest {
         this(name, null);
     }
 
-    public SetAttributesRequest(List<HueObject> lights) {
+    public SetAttributesRequest(List<Light> lights) {
         this(null, lights);
     }
 
-    public SetAttributesRequest(String name, List<HueObject> lights) {
+    public SetAttributesRequest(String name, List<Light> lights) {
         if (name != null && Util.stringSize(name) > 32) {
             throw new IllegalArgumentException("Name can be at most 32 characters long");
         } else if (lights != null && (lights.size() == 0 || lights.size() > 16)) {
