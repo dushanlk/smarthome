@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,11 +13,16 @@
 package org.eclipse.smarthome.binding.bosesoundtouch.internal;
 
 import static org.eclipse.smarthome.binding.bosesoundtouch.BoseSoundTouchBindingConstants.*;
+import static org.eclipse.smarthome.core.thing.Thing.PROPERTY_FIRMWARE_VERSION;
+import static org.eclipse.smarthome.core.thing.Thing.PROPERTY_HARDWARE_VERSION;
+import static org.eclipse.smarthome.core.thing.Thing.PROPERTY_MODEL_ID;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Stack;
 
+import org.eclipse.smarthome.binding.bosesoundtouch.BoseSoundTouchConfiguration;
 import org.eclipse.smarthome.binding.bosesoundtouch.handler.BoseSoundTouchHandler;
 import org.eclipse.smarthome.core.library.types.DecimalType;
 import org.eclipse.smarthome.core.library.types.OnOffType;
@@ -61,7 +66,10 @@ public class XMLResponseHandler extends DefaultHandler {
     private OnOffType skipPreviousEnabled;
 
     private State nowPlayingSource;
-    
+
+    private BoseSoundTouchConfiguration masterDeviceId;
+    String deviceId;
+
     private Map<Integer, ContentItem> playerPresets;
 
     /**
@@ -179,10 +187,13 @@ public class XMLResponseHandler extends DefaultHandler {
                 } else if ("presets".equals(localName)) {
                     // reset the current playerPrests
                     playerPresets = new HashMap<>();
-                    for (int i=1; i<=6; i++) {
+                    for (int i = 1; i <= 6; i++) {
                         playerPresets.put(i, null);
                     }
                     state = XMLHandlerState.Presets;
+                } else if ("group".equals(localName)) {
+                    this.masterDeviceId = new BoseSoundTouchConfiguration();
+                    state = stateMap.get(localName);
                 } else {
                     state = stateMap.get(localName);
                     if (state == null) {
@@ -192,6 +203,7 @@ public class XMLResponseHandler extends DefaultHandler {
                         }
                         state = XMLHandlerState.Unprocessed;
                     } else if (state != XMLHandlerState.Volume && state != XMLHandlerState.Presets
+                            && state != XMLHandlerState.Group
                             && state != XMLHandlerState.Unprocessed) {
                         if (!checkDeviceId(localName, attributes, false)) {
                             state = XMLHandlerState.Unprocessed;
@@ -263,16 +275,22 @@ public class XMLResponseHandler extends DefaultHandler {
                     state = XMLHandlerState.Unprocessed;
                 }
                 break;
+            // auto go trough the state map
+            case Group:
             case Zone:
-                state = nextState(stateMap, curState, localName);
-                break;
             case Bass:
             case ContentItem:
+            case MasterDeviceId:
+            case GroupName:
+            case DeviceId:
+            case DeviceIp:
             case Info:
             case NowPlaying:
             case Preset:
             case Updates:
             case Volume:
+            case Components:
+            case Component:
                 state = nextState(stateMap, curState, localName);
                 break;
             case BassCapabilities:
@@ -289,6 +307,8 @@ public class XMLResponseHandler extends DefaultHandler {
             case ContentItemContainerArt:
             case InfoName:
             case InfoType:
+            case InfoFirmwareVersion:
+            case InfoModuleType:
             case NowPlayingAlbum:
             case NowPlayingArt:
             case NowPlayingArtist:
@@ -370,6 +390,7 @@ public class XMLResponseHandler extends DefaultHandler {
                 commandExecutor.getInformations(APIRequest.BASS);
                 commandExecutor.getInformations(APIRequest.SOURCES);
                 commandExecutor.getInformations(APIRequest.BASSCAPABILITIES);
+                commandExecutor.getInformations(APIRequest.GET_GROUP);
                 break;
             case ContentItem:
                 if (state == XMLHandlerState.NowPlaying) {
@@ -419,6 +440,9 @@ public class XMLResponseHandler extends DefaultHandler {
             case Presets:
                 commandExecutor.updatePresetContainerFromPlayer(playerPresets);
                 playerPresets = null;
+                break;
+            case Group:
+                handler.handleGroupUpdated(masterDeviceId);
                 break;
             default:
                 // no actions...
@@ -477,6 +501,14 @@ public class XMLResponseHandler extends DefaultHandler {
                 break;
             case InfoType:
                 setConfigOption(DEVICE_INFO_TYPE, new String(ch, start, length));
+                setConfigOption(PROPERTY_MODEL_ID, new String(ch, start, length));
+                break;
+            case InfoModuleType:
+                setConfigOption(PROPERTY_HARDWARE_VERSION, new String(ch, start, length));
+                break;
+            case InfoFirmwareVersion:
+                String[] fwVersion = new String(ch, start, length).split(" ");
+                setConfigOption(PROPERTY_FIRMWARE_VERSION, fwVersion[0]);
                 break;
             case BassAvailable:
                 boolean bassAvailable = Boolean.parseBoolean(new String(ch, start, length));
@@ -539,6 +571,24 @@ public class XMLResponseHandler extends DefaultHandler {
             case VolumeMuteEnabled:
                 volumeMuteEnabled = Boolean.parseBoolean(new String(ch, start, length));
                 commandExecutor.setCurrentMuted(volumeMuteEnabled);
+                break;
+            case MasterDeviceId:
+                if (masterDeviceId != null) {
+                    masterDeviceId.macAddress = new String(ch, start, length);
+                }
+                break;
+            case GroupName:
+                if (masterDeviceId != null) {
+                    masterDeviceId.groupName = new String(ch, start, length);
+                }
+                break;
+            case DeviceId:
+                deviceId = new String(ch, start, length);
+                break;
+            case DeviceIp:
+                if (masterDeviceId != null && Objects.equals(masterDeviceId.macAddress, deviceId)) {
+                    masterDeviceId.host = new String(ch, start, length);
+                }
                 break;
             default:
                 // do nothing

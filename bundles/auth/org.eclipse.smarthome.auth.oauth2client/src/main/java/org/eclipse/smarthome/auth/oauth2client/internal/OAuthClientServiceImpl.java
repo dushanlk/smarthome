@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,12 +19,16 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.security.GeneralSecurityException;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
+import org.eclipse.jetty.util.StringUtil;
 import org.eclipse.jetty.util.UrlEncoded;
+import org.eclipse.smarthome.core.auth.client.oauth2.AccessTokenRefreshListener;
 import org.eclipse.smarthome.core.auth.client.oauth2.AccessTokenResponse;
 import org.eclipse.smarthome.core.auth.client.oauth2.OAuthClientService;
 import org.eclipse.smarthome.core.auth.client.oauth2.OAuthException;
@@ -58,21 +62,21 @@ public class OAuthClientServiceImpl implements OAuthClientService {
 
     private transient final Logger logger = LoggerFactory.getLogger(OAuthClientServiceImpl.class);
 
-    @NonNullByDefault({})
-    private OAuthStoreHandler storeHandler;
+    private @NonNullByDefault({}) OAuthStoreHandler storeHandler;
 
     // Constructor params - static
     private final String handle;
-    private final int tokenExpiresInBuffer;
+    private final int tokenExpiresInSeconds;
     private final HttpClientFactory httpClientFactory;
+    private final List<AccessTokenRefreshListener> accessTokenRefreshListeners = new ArrayList<>();
 
     private PersistedParams persistedParams = new PersistedParams();
 
     private volatile boolean closed = false;
 
-    private OAuthClientServiceImpl(String handle, int tokenExpiresInBuffer, HttpClientFactory httpClientFactory) {
+    private OAuthClientServiceImpl(String handle, int tokenExpiresInSeconds, HttpClientFactory httpClientFactory) {
         this.handle = handle;
-        this.tokenExpiresInBuffer = tokenExpiresInBuffer;
+        this.tokenExpiresInSeconds = tokenExpiresInSeconds;
         this.httpClientFactory = httpClientFactory;
     }
 
@@ -83,27 +87,24 @@ public class OAuthClientServiceImpl implements OAuthClientService {
      * @param handle The handle produced previously from
      *            {@link org.eclipse.smarthome.core.auth.client.oauth2.OAuthFactory#createOAuthClientService}
      * @param storeHandler Storage handler
-     * @param tokenExpiresInBuffer Positive integer; a small time buffer in seconds. It is used to calculate the expiry
+     * @param tokenExpiresInSeconds Positive integer; a small time buffer in seconds. It is used to calculate the expiry
      *            of the access tokens. This allows the access token to expire earlier than the
      *            official stated expiry time; thus prevents the caller obtaining a valid token at the time of invoke,
      *            only to find the token immediately expired.
      * @param httpClientFactory Http client factory
-     * @return new instance of OAuthClientServiceImpl
-     * @throws OAuthException if handle is not found in store.
+     * @return new instance of OAuthClientServiceImpl or null if it doesn't exist
      * @throws IllegalStateException if store is not available.
      */
-    static OAuthClientServiceImpl getInstance(String handle, OAuthStoreHandler storeHandler, int tokenExpiresInBuffer,
-            HttpClientFactory httpClientFactory) throws OAuthException {
-
-        OAuthClientServiceImpl clientService = new OAuthClientServiceImpl(handle, tokenExpiresInBuffer,
-                httpClientFactory);
-        clientService.storeHandler = storeHandler;
-
+    static @Nullable OAuthClientServiceImpl getInstance(String handle, OAuthStoreHandler storeHandler,
+            int tokenExpiresInSeconds, HttpClientFactory httpClientFactory) {
         // Load parameters from Store
         PersistedParams persistedParamsFromStore = storeHandler.loadPersistedParams(handle);
         if (persistedParamsFromStore == null) {
-            throw new OAuthException("Cannot get oauth provider parameters from handle:" + handle);
+            return null;
         }
+        OAuthClientServiceImpl clientService = new OAuthClientServiceImpl(handle, tokenExpiresInSeconds,
+                httpClientFactory);
+        clientService.storeHandler = storeHandler;
         clientService.persistedParams = persistedParamsFromStore;
 
         return clientService;
@@ -116,34 +117,17 @@ public class OAuthClientServiceImpl implements OAuthClientService {
      * @param handle The handle produced previously from
      *            {@link org.eclipse.smarthome.core.auth.client.oauth2.OAuthFactory#createOAuthClientService}*
      * @param storeHandler Storage handler
-     * @param tokenUrl Authorization provider; access token url
-     * @param authorizationUrl Authorization provider; authorization url
-     * @param clientId the client id
-     * @param clientSecret the client secret (optional)
-     * @param scope of the access, a space delimited separated list
-     * @param supportsBasicAuth whether the OAuth provider supports basic authorization or the client id and client
-     *            secret should be passed as form params. true - use http basic authentication, false - do not use http
-     *            basic authentication, null - unknown (default to do not use).
-     * @param tokenExpiresInBuffer Positive integer; a small time buffer in seconds. It is used to calculate the expiry
-     *            of the access tokens. This makes the access token to expire earlier than the official stated expiry
-     *            time. The mechanism prevents the caller from getting a valid token at the time of invocation, and then
-     *            to find the token immediately expired.
      * @param httpClientFactory Http client factory
+     * @param persistedParams These parameters are static with respect to the oauth provider and thus can be persisted.
      * @return OAuthClientServiceImpl an instance
      */
-    static OAuthClientServiceImpl getInstance(String handle, OAuthStoreHandler storeHandler, String tokenUrl,
-            @Nullable String authorizationUrl, String clientId, @Nullable String clientSecret, @Nullable String scope,
-            @Nullable Boolean supportsBasicAuth, int tokenExpiresInBuffer, HttpClientFactory httpClientFactory) {
-
-        OAuthClientServiceImpl clientService = new OAuthClientServiceImpl(handle, tokenExpiresInBuffer,
+    static OAuthClientServiceImpl createInstance(String handle, OAuthStoreHandler storeHandler,
+            HttpClientFactory httpClientFactory, PersistedParams params) {
+        OAuthClientServiceImpl clientService = new OAuthClientServiceImpl(handle, params.tokenExpiresInSeconds,
                 httpClientFactory);
+
         clientService.storeHandler = storeHandler;
-        clientService.persistedParams.tokenUrl = tokenUrl;
-        clientService.persistedParams.authorizationUrl = authorizationUrl;
-        clientService.persistedParams.clientId = clientId;
-        clientService.persistedParams.clientSecret = clientSecret;
-        clientService.persistedParams.scope = scope;
-        clientService.persistedParams.supportsBasicAuth = supportsBasicAuth;
+        clientService.persistedParams = params;
         storeHandler.savePersistedParams(handle, clientService.persistedParams);
 
         return clientService;
@@ -157,11 +141,9 @@ public class OAuthClientServiceImpl implements OAuthClientService {
         } else {
             persistedParams.state = state;
         }
-        persistedParams.scope = scope;
-
+        String scopeToUse = scope == null ? persistedParams.scope : scope;
         // keep it to check against redirectUri in #getAccessTokenResponseByAuthorizationCode
         persistedParams.redirectUri = redirectURI;
-
         String authorizationUrl = persistedParams.authorizationUrl;
         if (authorizationUrl == null) {
             throw new OAuthException("Missing authorization url");
@@ -172,8 +154,8 @@ public class OAuthClientServiceImpl implements OAuthClientService {
         }
 
         OAuthConnector connector = new OAuthConnector(httpClientFactory);
-
-        return connector.getAuthorizationUrl(authorizationUrl, clientId, redirectURI, persistedParams.state, scope);
+        return connector.getAuthorizationUrl(authorizationUrl, clientId, redirectURI, persistedParams.state,
+                scopeToUse);
     }
 
     @Override
@@ -211,15 +193,12 @@ public class OAuthClientServiceImpl implements OAuthClientService {
             throw new OAuthException(EXCEPTION_MESSAGE_CLOSED);
         }
 
-        OAuthConnector connector = new OAuthConnector(httpClientFactory);
-
         if (persistedParams.redirectUri != null && !persistedParams.redirectUri.equals(redirectURI)) {
             // check parameter redirectURI in #getAuthorizationUrl are the same as given
             throw new OAuthException(String.format(
                     "redirectURI should be the same from previous call #getAuthorizationUrl.  Expected: %s Found: %s",
                     persistedParams.redirectUri, redirectURI));
         }
-
         String tokenUrl = persistedParams.tokenUrl;
         if (tokenUrl == null) {
             throw new OAuthException("Missing token url");
@@ -229,6 +208,7 @@ public class OAuthClientServiceImpl implements OAuthClientService {
             throw new OAuthException("Missing client ID");
         }
 
+        OAuthConnector connector = new OAuthConnector(httpClientFactory);
         AccessTokenResponse accessTokenResponse = connector.grantTypeAuthorizationCode(tokenUrl, authorizationCode,
                 clientId, persistedParams.clientSecret, redirectURI,
                 Boolean.TRUE.equals(persistedParams.supportsBasicAuth));
@@ -256,14 +236,12 @@ public class OAuthClientServiceImpl implements OAuthClientService {
         if (isClosed()) {
             throw new OAuthException(EXCEPTION_MESSAGE_CLOSED);
         }
-
-        OAuthConnector connector = new OAuthConnector(httpClientFactory);
-
         String tokenUrl = persistedParams.tokenUrl;
         if (tokenUrl == null) {
             throw new OAuthException("Missing token url");
         }
 
+        OAuthConnector connector = new OAuthConnector(httpClientFactory);
         AccessTokenResponse accessTokenResponse = connector.grantTypePassword(tokenUrl, username, password,
                 persistedParams.clientId, persistedParams.clientSecret, scope,
                 Boolean.TRUE.equals(persistedParams.supportsBasicAuth));
@@ -280,22 +258,16 @@ public class OAuthClientServiceImpl implements OAuthClientService {
         if (isClosed()) {
             throw new OAuthException(EXCEPTION_MESSAGE_CLOSED);
         }
-
-        if (persistedParams.tokenUrl == null) {
-            throw new IllegalStateException("bull shit");
-        }
-        OAuthConnector connector = new OAuthConnector(httpClientFactory);
-
         String tokenUrl = persistedParams.tokenUrl;
         if (tokenUrl == null) {
             throw new OAuthException("Missing token url");
         }
-
         String clientId = persistedParams.clientId;
         if (clientId == null) {
             throw new OAuthException("Missing client ID");
         }
 
+        OAuthConnector connector = new OAuthConnector(httpClientFactory);
         // depending on usage, cannot guarantee every parameter is not null at the beginning
         AccessTokenResponse accessTokenResponse = connector.grantTypeClientCredentials(tokenUrl, clientId,
                 persistedParams.clientSecret, scope, Boolean.TRUE.equals(persistedParams.supportsBasicAuth));
@@ -335,8 +307,13 @@ public class OAuthClientServiceImpl implements OAuthClientService {
                 lastAccessToken.getRefreshToken(), persistedParams.clientId, persistedParams.clientSecret,
                 persistedParams.scope, Boolean.TRUE.equals(persistedParams.supportsBasicAuth));
 
+        // The service may not return the refresh token so use the last refresh token otherwise it's not stored.
+        if (StringUtil.isBlank(accessTokenResponse.getRefreshToken())) {
+            accessTokenResponse.setRefreshToken(lastAccessToken.getRefreshToken());
+        }
         // store it
         storeHandler.saveAccessTokenResponse(handle, accessTokenResponse);
+        accessTokenRefreshListeners.forEach(l -> l.onAccessTokenResponse(accessTokenResponse));
         return accessTokenResponse;
     }
 
@@ -358,7 +335,7 @@ public class OAuthClientServiceImpl implements OAuthClientService {
             return null;
         }
 
-        if (lastAccessToken.isExpired(LocalDateTime.now(), tokenExpiresInBuffer)
+        if (lastAccessToken.isExpired(LocalDateTime.now(), tokenExpiresInSeconds)
                 && lastAccessToken.getRefreshToken() != null) {
             return refreshToken();
         }
@@ -385,7 +362,7 @@ public class OAuthClientServiceImpl implements OAuthClientService {
      * @param tokenExpiresInBuffer The number of seconds to remove the expires-in. Default 0 seconds.
      */
     public void setTokenExpiresInBuffer(int tokenExpiresInBuffer) {
-        this.persistedParams.tokenExpiresInBuffer = tokenExpiresInBuffer;
+        this.persistedParams.tokenExpiresInSeconds = tokenExpiresInBuffer;
     }
 
     @Override
@@ -413,31 +390,18 @@ public class OAuthClientServiceImpl implements OAuthClientService {
         return closed;
     }
 
-    private String createNewState() {
-        return UUID.randomUUID().toString();
+    @Override
+    public void addAccessTokenRefreshListener(AccessTokenRefreshListener listener) {
+        accessTokenRefreshListeners.add(listener);
     }
 
-    // Params that need to be persisted
-    public static class PersistedParams {
-        @Nullable
-        String handle;
-        @Nullable
-        String tokenUrl;
-        @Nullable
-        String authorizationUrl;
-        @Nullable
-        String clientId;
-        @Nullable
-        String clientSecret;
-        @Nullable
-        String scope;
-        @Nullable
-        Boolean supportsBasicAuth;
-        @Nullable
-        String state;
-        @Nullable
-        String redirectUri;
-        int tokenExpiresInBuffer = 60;
+    @Override
+    public boolean removeAccessTokenRefreshListener(AccessTokenRefreshListener listener) {
+        return accessTokenRefreshListeners.remove(listener);
+    }
+
+    private String createNewState() {
+        return UUID.randomUUID().toString();
     }
 
 }

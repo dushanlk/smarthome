@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,7 +13,7 @@
 package org.eclipse.smarthome.binding.onewire.owserver;
 
 import static org.junit.Assert.*;
-import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.*;
 import static org.mockito.MockitoAnnotations.initMocks;
 
 import java.io.IOException;
@@ -22,6 +22,7 @@ import java.util.concurrent.CompletableFuture;
 
 import org.eclipse.smarthome.binding.onewire.internal.OwException;
 import org.eclipse.smarthome.binding.onewire.internal.OwPageBuffer;
+import org.eclipse.smarthome.binding.onewire.internal.SensorId;
 import org.eclipse.smarthome.binding.onewire.internal.handler.OwserverBridgeHandler;
 import org.eclipse.smarthome.binding.onewire.internal.owserver.OwserverConnection;
 import org.eclipse.smarthome.binding.onewire.internal.owserver.OwserverConnectionState;
@@ -93,23 +94,23 @@ public class OwserverConnectionTest extends JavaTest {
 
     @Test
     public void failedConnectionReportedToBridgeHandler() {
-        owserverConnection.setPort(testPort + 1);
+        owserverConnection.setPort(1);
 
         owserverConnection.start();
 
-        Mockito.verify(bridgeHandler).reportConnectionState(OwserverConnectionState.FAILED);
+        Mockito.verify(bridgeHandler, timeout(100)).reportConnectionState(OwserverConnectionState.FAILED);
     }
 
     @Test
     public void testGetDirectory() {
         owserverConnection.start();
         try {
-            List<String> presence = owserverConnection.getDirectory();
+            List<SensorId> directory = owserverConnection.getDirectory("/");
 
-            assertEquals(3, presence.size());
-            assertEquals("sensor0", presence.get(0));
-            assertEquals("sensor1", presence.get(1));
-            assertEquals("sensor2", presence.get(2));
+            assertEquals(3, directory.size());
+            assertEquals(new SensorId("/00.0123456789ab"), directory.get(0));
+            assertEquals(new SensorId("/00.0123456789ac"), directory.get(1));
+            assertEquals(new SensorId("/00.0123456789ad"), directory.get(2));
         } catch (OwException e) {
             Assert.fail("caught unexpected OwException");
         }
@@ -136,6 +137,19 @@ public class OwserverConnectionTest extends JavaTest {
             DecimalType number = (DecimalType) owserverConnection.readDecimalType("testsensor/decimal");
 
             assertEquals(17.4, number.doubleValue(), 0.01);
+        } catch (OwException e) {
+            Assert.fail("caught unexpected OwException");
+        }
+    }
+
+    @Test
+    public void testReadDecimalTypeArray() {
+        owserverConnection.start();
+        try {
+            List<State> numbers = owserverConnection.readDecimalTypeArray("testsensor/decimalarray");
+
+            assertEquals(3834, ((DecimalType) numbers.get(0)).intValue());
+            assertEquals(0, ((DecimalType) numbers.get(1)).intValue());
         } catch (OwException e) {
             Assert.fail("caught unexpected OwException");
         }

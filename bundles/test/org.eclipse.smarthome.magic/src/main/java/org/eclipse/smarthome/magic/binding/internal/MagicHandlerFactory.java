@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,7 +14,10 @@ package org.eclipse.smarthome.magic.binding.internal;
 
 import static org.eclipse.smarthome.magic.binding.MagicBindingConstants.*;
 
+import java.util.Collections;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.eclipse.smarthome.core.thing.Bridge;
 import org.eclipse.smarthome.core.thing.Thing;
@@ -22,6 +25,7 @@ import org.eclipse.smarthome.core.thing.ThingTypeUID;
 import org.eclipse.smarthome.core.thing.binding.BaseThingHandlerFactory;
 import org.eclipse.smarthome.core.thing.binding.ThingHandler;
 import org.eclipse.smarthome.core.thing.binding.ThingHandlerFactory;
+import org.eclipse.smarthome.magic.binding.handler.MagicActionModuleThingHandler;
 import org.eclipse.smarthome.magic.binding.handler.MagicBridgeHandler;
 import org.eclipse.smarthome.magic.binding.handler.MagicBridgedThingHandler;
 import org.eclipse.smarthome.magic.binding.handler.MagicChattyThingHandler;
@@ -41,8 +45,6 @@ import org.eclipse.smarthome.magic.binding.handler.MagicRolllershutterHandler;
 import org.eclipse.smarthome.magic.binding.handler.MagicThermostatThingHandler;
 import org.osgi.service.component.annotations.Component;
 
-import com.google.common.collect.Sets;
-
 /**
  * The {@link MagicHandlerFactory} is responsible for creating things and thing
  * handlers.
@@ -52,12 +54,13 @@ import com.google.common.collect.Sets;
 @Component(service = ThingHandlerFactory.class, configurationPid = "binding.magic")
 public class MagicHandlerFactory extends BaseThingHandlerFactory {
 
-    private static final Set<ThingTypeUID> SUPPORTED_THING_TYPES_UIDS = Sets.newHashSet(THING_TYPE_EXTENSIBLE_THING,
-            THING_TYPE_ON_OFF_LIGHT, THING_TYPE_DIMMABLE_LIGHT, THING_TYPE_COLOR_LIGHT, THING_TYPE_CONTACT_SENSOR,
-            THING_TYPE_CONFIG_THING, THING_TYPE_DELAYED_THING, THING_TYPE_LOCATION, THING_TYPE_THERMOSTAT,
-            THING_TYPE_FIRMWARE_UPDATE, THING_TYPE_BRIDGE_1, THING_TYPE_BRIDGE_2, THING_TYPE_BRIDGED_THING,
-            THING_TYPE_CHATTY_THING, THING_TYPE_ROLLERSHUTTER, THING_TYPE_PLAYER, THING_TYPE_IMAGE,
-            THING_TYPE_ONLINE_OFFLINE);
+    private static final Set<ThingTypeUID> SUPPORTED_THING_TYPES_UIDS = Collections.unmodifiableSet(Stream
+            .of(THING_TYPE_EXTENSIBLE_THING, THING_TYPE_ON_OFF_LIGHT, THING_TYPE_DIMMABLE_LIGHT, THING_TYPE_COLOR_LIGHT,
+                    THING_TYPE_CONTACT_SENSOR, THING_TYPE_CONFIG_THING, THING_TYPE_DELAYED_THING, THING_TYPE_LOCATION,
+                    THING_TYPE_THERMOSTAT, THING_TYPE_FIRMWARE_UPDATE, THING_TYPE_BRIDGE_1, THING_TYPE_BRIDGE_2,
+                    THING_TYPE_BRIDGED_THING, THING_TYPE_CHATTY_THING, THING_TYPE_ROLLERSHUTTER, THING_TYPE_PLAYER,
+                    THING_TYPE_IMAGE, THING_TYPE_ACTION_MODULE, THING_TYPE_ONLINE_OFFLINE)
+            .collect(Collectors.toSet()));
 
     @Override
     public boolean supportsThingType(ThingTypeUID thingTypeUID) {
@@ -112,6 +115,10 @@ public class MagicHandlerFactory extends BaseThingHandlerFactory {
         }
         if (thingTypeUID.equals(THING_TYPE_IMAGE)) {
             return new MagicImageHandler(thing);
+        }
+        if (thingTypeUID.equals(THING_TYPE_ACTION_MODULE)) {
+            MagicActionModuleThingHandler handler = new MagicActionModuleThingHandler(thing);
+            return handler;
         }
         if (thingTypeUID.equals(THING_TYPE_ONLINE_OFFLINE)) {
             return new MagicOnlineOfflineHandler(thing);

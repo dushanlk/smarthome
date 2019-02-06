@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -31,6 +31,7 @@ import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.eclipse.jetty.websocket.client.WebSocketClient;
+import org.eclipse.smarthome.io.net.http.ExtensibleTrustManager;
 import org.eclipse.smarthome.io.net.http.HttpClientFactory;
 import org.eclipse.smarthome.io.net.http.HttpClientInitializationException;
 import org.eclipse.smarthome.io.net.http.TrustManagerProvider;
@@ -50,6 +51,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author Michael Bock - Initial contribution
  * @author Kai Kreuzer - added web socket support
+ * @author Martin van Wingerden - Add support for ESHTrustManager
  */
 @Component(immediate = true, configurationPid = "org.eclipse.smarthome.webclient")
 @NonNullByDefault
@@ -69,6 +71,7 @@ public class WebClientFactoryImpl implements HttpClientFactory, WebSocketFactory
     private static final Pattern CONSUMER_NAME_PATTERN = Pattern.compile("[a-zA-Z0-9_\\-]*");
 
     private volatile @Nullable TrustManagerProvider trustmanagerProvider;
+    private @NonNullByDefault({}) ExtensibleTrustManager extensibleTrustManager;
 
     private @NonNullByDefault({}) QueuedThreadPool threadPool;
     private @NonNullByDefault({}) HttpClient commonHttpClient;
@@ -76,10 +79,10 @@ public class WebClientFactoryImpl implements HttpClientFactory, WebSocketFactory
 
     private int minThreadsShared;
     private int maxThreadsShared;
-    private int keepAliveTimeoutShared;
+    private int keepAliveTimeoutShared; // in s
     private int minThreadsCustom;
     private int maxThreadsCustom;
-    private int keepAliveTimeoutCustom;
+    private int keepAliveTimeoutCustom; // in s
 
     @Activate
     protected void activate(Map<String, Object> parameters) {
@@ -122,19 +125,35 @@ public class WebClientFactoryImpl implements HttpClientFactory, WebSocketFactory
     }
 
     @Override
+    @Deprecated
     public HttpClient createHttpClient(String consumerName, String endpoint) {
         Objects.requireNonNull(endpoint, "endpoint must not be null");
         logger.debug("http client for endpoint {} requested", endpoint);
         checkConsumerName(consumerName);
-        return createHttpClientInternal(consumerName, endpoint, false);
+        return createHttpClientInternal(consumerName, endpoint, false, null);
     }
 
     @Override
+    public HttpClient createHttpClient(String consumerName) {
+        logger.debug("http client for consumer {} requested", consumerName);
+        checkConsumerName(consumerName);
+        return createHttpClientInternal(consumerName, null, false, null);
+    }
+
+    @Override
+    @Deprecated
     public WebSocketClient createWebSocketClient(String consumerName, String endpoint) {
         Objects.requireNonNull(endpoint, "endpoint must not be null");
         logger.debug("web socket client for endpoint {} requested", endpoint);
         checkConsumerName(consumerName);
-        return createWebSocketClientInternal(consumerName, endpoint, false);
+        return createWebSocketClientInternal(consumerName, endpoint, false, null);
+    }
+
+    @Override
+    public WebSocketClient createWebSocketClient(String consumerName) {
+        logger.debug("web socket client for consumer {} requested", consumerName);
+        checkConsumerName(consumerName);
+        return createWebSocketClientInternal(consumerName, null, false, null);
     }
 
     @Override
@@ -154,12 +173,13 @@ public class WebClientFactoryImpl implements HttpClientFactory, WebSocketFactory
     private void getConfigParameters(Map<String, Object> parameters) {
         minThreadsShared = getConfigParameter(parameters, CONFIG_MIN_THREADS_SHARED, 10);
         maxThreadsShared = getConfigParameter(parameters, CONFIG_MAX_THREADS_SHARED, 40);
-        keepAliveTimeoutShared = getConfigParameter(parameters, CONFIG_KEEP_ALIVE_SHARED, 60);
+        keepAliveTimeoutShared = getConfigParameter(parameters, CONFIG_KEEP_ALIVE_SHARED, 300);
         minThreadsCustom = getConfigParameter(parameters, CONFIG_MIN_THREADS_CUSTOM, 5);
         maxThreadsCustom = getConfigParameter(parameters, CONFIG_MAX_THREADS_CUSTOM, 10);
-        keepAliveTimeoutCustom = getConfigParameter(parameters, CONFIG_KEEP_ALIVE_CUSTOM, 60);
+        keepAliveTimeoutCustom = getConfigParameter(parameters, CONFIG_KEEP_ALIVE_CUSTOM, 300);
     }
 
+    @SuppressWarnings({ "null", "unused" })
     private int getConfigParameter(Map<String, Object> parameters, String parameter, int defaultValue) {
         if (parameters == null) {
             return defaultValue;
@@ -196,12 +216,17 @@ public class WebClientFactoryImpl implements HttpClientFactory, WebSocketFactory
                         }
 
                         if (commonHttpClient == null) {
-                            commonHttpClient = createHttpClientInternal("common", null, true);
+                            commonHttpClient = createHttpClientInternal("common", null, true, threadPool);
+                            // we need to set the stop timeout AFTER the client has been started, because
+                            // otherwise the Jetty client sets it back to the default value.
+                            // We need the stop timeout in order to prevent blocking the deactivation of this
+                            // component, see https://github.com/eclipse/smarthome/issues/6632
+                            threadPool.setStopTimeout(0);
                             logger.debug("Jetty shared http client created");
                         }
 
                         if (commonWebSocketClient == null) {
-                            commonWebSocketClient = createWebSocketClientInternal("common", null, true);
+                            commonWebSocketClient = createWebSocketClientInternal("common", null, true, threadPool);
                             logger.debug("Jetty shared web socket client created");
                         }
 
@@ -220,20 +245,30 @@ public class WebClientFactoryImpl implements HttpClientFactory, WebSocketFactory
         }
     }
 
-    private HttpClient createHttpClientInternal(String consumerName, @Nullable String endpoint, boolean startClient) {
+    private HttpClient createHttpClientInternal(String consumerName, @Nullable String endpoint, boolean startClient,
+            @Nullable QueuedThreadPool threadPool) {
         try {
             return AccessController.doPrivileged(new PrivilegedExceptionAction<HttpClient>() {
                 @Override
                 public HttpClient run() {
-                    logger.debug("creating http client for endpoint {}", endpoint);
-                    SslContextFactory sslContextFactory = createSslContextFactory(endpoint);
+                    if (logger.isDebugEnabled()) {
+                        if (endpoint == null) {
+                            logger.debug("creating http client for consumer {}", consumerName);
+                        } else {
+                            logger.debug("creating http client for consumer {}, endpoint {}", consumerName, endpoint);
+                        }
+                    }
 
-                    HttpClient httpClient = new HttpClient(sslContextFactory);
-                    final QueuedThreadPool queuedThreadPool = createThreadPool(consumerName, minThreadsCustom,
-                            maxThreadsCustom, keepAliveTimeoutCustom);
-
+                    HttpClient httpClient = new HttpClient(createSslContextFactory(endpoint));
                     httpClient.setMaxConnectionsPerDestination(2);
-                    httpClient.setExecutor(queuedThreadPool);
+
+                    if (threadPool != null) {
+                        httpClient.setExecutor(threadPool);
+                    } else {
+                        final QueuedThreadPool queuedThreadPool = createThreadPool(consumerName, minThreadsCustom,
+                                maxThreadsCustom, keepAliveTimeoutCustom);
+                        httpClient.setExecutor(queuedThreadPool);
+                    }
 
                     if (startClient) {
                         try {
@@ -259,19 +294,28 @@ public class WebClientFactoryImpl implements HttpClientFactory, WebSocketFactory
     }
 
     private WebSocketClient createWebSocketClientInternal(String consumerName, @Nullable String endpoint,
-            boolean startClient) {
+            boolean startClient, @Nullable QueuedThreadPool threadPool) {
         try {
             return AccessController.doPrivileged(new PrivilegedExceptionAction<WebSocketClient>() {
                 @Override
                 public WebSocketClient run() {
-                    logger.debug("creating web socket client for endpoint {}", endpoint);
-                    SslContextFactory sslContextFactory = createSslContextFactory(endpoint);
+                    if (logger.isDebugEnabled()) {
+                        if (endpoint == null) {
+                            logger.debug("creating web socket client for consumer {}", consumerName);
+                        } else {
+                            logger.debug("creating web socket client for consumer {}, endpoint {}", consumerName,
+                                    endpoint);
+                        }
+                    }
 
-                    WebSocketClient webSocketClient = new WebSocketClient(sslContextFactory);
-                    final QueuedThreadPool queuedThreadPool = createThreadPool(consumerName, minThreadsCustom,
-                            maxThreadsCustom, keepAliveTimeoutCustom);
-
-                    webSocketClient.setExecutor(queuedThreadPool);
+                    WebSocketClient webSocketClient = new WebSocketClient(createSslContextFactory(endpoint));
+                    if (threadPool != null) {
+                        webSocketClient.setExecutor(threadPool);
+                    } else {
+                        final QueuedThreadPool queuedThreadPool = createThreadPool(consumerName, minThreadsCustom,
+                                maxThreadsCustom, keepAliveTimeoutCustom);
+                        webSocketClient.setExecutor(queuedThreadPool);
+                    }
 
                     if (startClient) {
                         try {
@@ -298,8 +342,8 @@ public class WebClientFactoryImpl implements HttpClientFactory, WebSocketFactory
 
     private QueuedThreadPool createThreadPool(String consumerName, int minThreads, int maxThreads,
             int keepAliveTimeout) {
-        QueuedThreadPool queuedThreadPool = new QueuedThreadPool(maxThreads, minThreads, keepAliveTimeout);
-        queuedThreadPool.setName(consumerName);
+        QueuedThreadPool queuedThreadPool = new QueuedThreadPool(maxThreads, minThreads, keepAliveTimeout * 1000);
+        queuedThreadPool.setName("ESH-httpClient-" + consumerName);
         queuedThreadPool.setDaemon(true);
         return queuedThreadPool;
     }
@@ -320,18 +364,35 @@ public class WebClientFactoryImpl implements HttpClientFactory, WebSocketFactory
         }
     }
 
-    @Reference(service = TrustManagerProvider.class, cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC)
-    protected void setTrustmanagerProvider(TrustManagerProvider trustmanagerProvider) {
-        this.trustmanagerProvider = trustmanagerProvider;
-    }
-
-    protected void unsetTrustmanagerProvider(TrustManagerProvider trustmanagerProvider) {
-        if (this.trustmanagerProvider == trustmanagerProvider) {
-            this.trustmanagerProvider = null;
+    private SslContextFactory createSslContextFactory(@Nullable String endpoint) {
+        if (endpoint == null) {
+            return createSslContextFactoryFromExtensibleTrustManager();
+        } else {
+            return createSslContextFactoryFromTrustManagerProvider(endpoint);
         }
     }
 
-    private SslContextFactory createSslContextFactory(@Nullable String endpoint) {
+    private SslContextFactory createSslContextFactoryFromExtensibleTrustManager() {
+        SslContextFactory sslContextFactory = new SslContextFactory();
+        sslContextFactory.setEndpointIdentificationAlgorithm("HTTPS");
+        if (extensibleTrustManager != null) {
+            try {
+                logger.debug("Setting up SSLContext for {}", extensibleTrustManager);
+                SSLContext sslContext = SSLContext.getInstance("TLS");
+                sslContext.init(null, new TrustManager[] { extensibleTrustManager }, null);
+                sslContextFactory.setSslContext(sslContext);
+            } catch (NoSuchAlgorithmException | KeyManagementException ex) {
+                throw new HttpClientInitializationException("Cannot create an TLS context!", ex);
+            }
+        }
+
+        String excludeCipherSuites[] = { "^.*_(MD5)$" };
+        sslContextFactory.setExcludeCipherSuites(excludeCipherSuites);
+        return sslContextFactory;
+    }
+
+    @Deprecated
+    private SslContextFactory createSslContextFactoryFromTrustManagerProvider(@Nullable String endpoint) {
         SslContextFactory sslContextFactory = new SslContextFactory();
         sslContextFactory.setEndpointIdentificationAlgorithm("HTTPS");
         if (endpoint != null && trustmanagerProvider != null) {
@@ -350,8 +411,34 @@ public class WebClientFactoryImpl implements HttpClientFactory, WebSocketFactory
                 }
             }
         }
+
         String excludeCipherSuites[] = { "^.*_(MD5)$" };
         sslContextFactory.setExcludeCipherSuites(excludeCipherSuites);
         return sslContextFactory;
     }
+
+    @Reference
+    protected void setExtensibleTrustManager(ExtensibleTrustManager extensibleTrustManager) {
+        this.extensibleTrustManager = extensibleTrustManager;
+    }
+
+    protected void unsetExtensibleTrustManager(ExtensibleTrustManager extensibleTrustManager) {
+        if (this.extensibleTrustManager == extensibleTrustManager) {
+            this.extensibleTrustManager = null;
+        }
+    }
+
+    @Reference(service = TrustManagerProvider.class, cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC)
+    @Deprecated
+    protected void setTrustmanagerProvider(TrustManagerProvider trustmanagerProvider) {
+        this.trustmanagerProvider = trustmanagerProvider;
+    }
+
+    @Deprecated
+    protected void unsetTrustmanagerProvider(TrustManagerProvider trustmanagerProvider) {
+        if (this.trustmanagerProvider == trustmanagerProvider) {
+            this.trustmanagerProvider = null;
+        }
+    }
+
 }

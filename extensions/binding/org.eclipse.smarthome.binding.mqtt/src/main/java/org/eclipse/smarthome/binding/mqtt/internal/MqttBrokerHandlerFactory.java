@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -23,8 +23,8 @@ import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.binding.mqtt.MqttBindingConstants;
-import org.eclipse.smarthome.binding.mqtt.discovery.MQTTTopicDiscoveryService;
 import org.eclipse.smarthome.binding.mqtt.discovery.MQTTTopicDiscoveryParticipant;
+import org.eclipse.smarthome.binding.mqtt.discovery.MQTTTopicDiscoveryService;
 import org.eclipse.smarthome.binding.mqtt.handler.AbstractBrokerHandler;
 import org.eclipse.smarthome.binding.mqtt.handler.BrokerHandler;
 import org.eclipse.smarthome.binding.mqtt.handler.SystemBrokerHandler;
@@ -46,7 +46,7 @@ import org.osgi.service.component.annotations.Reference;
  * @author David Graeff - Initial contribution
  */
 @NonNullByDefault
-@Component(immediate = true, service = { ThingHandlerFactory.class,
+@Component(service = { ThingHandlerFactory.class,
         MQTTTopicDiscoveryService.class }, configurationPid = "MqttBrokerHandlerFactory")
 public class MqttBrokerHandlerFactory extends BaseThingHandlerFactory implements MQTTTopicDiscoveryService {
     private static final Set<ThingTypeUID> SUPPORTED_THING_TYPES_UIDS = Stream

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -88,7 +88,7 @@ public class SystemOffsetProfile implements StateProfile {
 
     @Override
     public void onStateUpdateFromItem(State state) {
-        callback.handleCommand((Command) applyOffset(state, false));
+        callback.handleUpdate((State) applyOffset(state, false));
     }
 
     @Override
