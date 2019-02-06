@@ -43,8 +43,8 @@ CCU Autodiscovery:
 **Note:** The binding tries to identify the gateway with XML-RPC and uses henceforth:
 
 -   **CCU**
-    - **RF**: BIN-RPC
-    - **WIRED**: BIN-RPC
+    - **RF**: XML-RPC
+    - **WIRED**: XML-RPC
     - **HMIP**: XML-RPC
     - **CUxD**: BIN-RPC (CUxD version >= 1.6 required)
     - **Groups**: XML-RPC
@@ -97,6 +97,9 @@ Hint for the binding to identify the gateway type (auto|ccu|noccu) (default = au
 
 -   **callbackHost**
 Callback network address of the system runtime, default is auto-discovery
+
+-   **bindAddress**
+The address the XML-/BINRPC server binds to, default is callbackHost
 
 -   **callbackPort DEPRECATED, use binCallbackPort and xmlCallbackPort**
 Callback port of the binding's server, default is 9125 and counts up for each additional bridge
@@ -419,21 +422,25 @@ then
 end
 ```
 
-### PRESS
+### BUTTON
 
 A virtual datapoint (String) to simulate a key press, available on all channels that contains PRESS_ datapoints.
-Available values: SHORT, LONG, LONG_RELEASE, CONT
+Available values:
+* `SHORT_PRESS`: triggered on a short key press
+* `LONG_PRESS`: triggered on a key press longer than `LONG_PRESS_TIME` (variable configuration per key, default is 0.4 s)
+* `DOUBLE_PRESS`: triggered on a short key press but only if the latest `SHORT_PRESS` or `DOUBLE_PRESS` event is not older than 2.0 s (not related to `DBL_PRESS_TIME` configuration, which is more like a key lock because if it is other than `0.0` single presses are not notified anymore)
 
-Example: to capture a key press on the 19 button remote control in a rule
+Example: to capture a short key press on the 19 button remote control in a rule
 
 ```javascript
 rule "example trigger rule"
 when
-    Channel 'homematic:HM-RC-19-B:ccu:KEQ0012345:1#PRESS' triggered SHORT
+    Channel 'homematic:HM-RC-19-B:ccu:KEQ0012345:1#BUTTON' triggered SHORT_PRESS
 then
     ...
 end
 ```
+
 
 ## Troubleshooting
 

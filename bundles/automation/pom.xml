@@ -6,7 +6,7 @@
   <parent>
     <groupId>org.eclipse.smarthome</groupId>
     <artifactId>bundles</artifactId>
-    <version>0.10.0-SNAPSHOT</version>
+    <version>0.11.0-SNAPSHOT</version>
   </parent>
   <groupId>org.eclipse.smarthome.bundles</groupId>
   <artifactId>automation</artifactId>
@@ -42,21 +42,7 @@
     <module>org.eclipse.smarthome.automation.sample.java.demo</module>
     <module>org.eclipse.smarthome.automation.sample.json.demo</module>
     <module>org.eclipse.smarthome.automation.sample.moduletype.demo</module>
+    <module>org.eclipse.smarthome.automation.thingsupport</module>
   </modules>
-
-  <dependencies>
-    <dependency>
-      <groupId>de.twentyeleven.skysail</groupId>
-      <artifactId>org.json-osgi</artifactId>
-      <version>20080701</version>
-    </dependency>
-    <!--
-      <dependency>
-      <groupId>org.json</groupId>
-      <artifactId>json</artifactId>
-      <version>20141113</version>
-      </dependency>
-    -->
-  </dependencies>
 
 </project>

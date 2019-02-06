@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,6 +13,8 @@
 package org.eclipse.smarthome.binding.onewire.internal.owserver;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.eclipse.smarthome.binding.onewire.internal.SensorId;
+import org.eclipse.smarthome.binding.onewire.internal.device.OwDeviceParameter;
 
 /**
  * The {@link OwserverDeviceParameter} device parameter definition for owserver bridge handler
@@ -21,7 +23,7 @@ import org.eclipse.jdt.annotation.NonNullByDefault;
  */
 
 @NonNullByDefault
-public class OwserverDeviceParameter {
+public class OwserverDeviceParameter extends OwDeviceParameter {
     private String prefix = "";
     private String path = "";
 
@@ -29,13 +31,13 @@ public class OwserverDeviceParameter {
      * device parameter for owserver bridge handler
      *
      * @param prefix path prefix (e.g. "uncached/")
-     * @param path path without sensor id (e.g. "/humidity")
+     * @param path   path without sensor id (e.g. "/humidity")
      */
     public OwserverDeviceParameter(String prefix, String path) {
         if (prefix.endsWith("/")) {
-            this.prefix = prefix;
+            this.prefix = prefix.substring(0, prefix.length() - 1);
         } else {
-            this.prefix = prefix + "/";
+            this.prefix = prefix;
         }
         if (path.startsWith("/")) {
             this.path = path;
@@ -58,12 +60,12 @@ public class OwserverDeviceParameter {
      *
      * @param sensorId
      */
-    public String getPath(String sensorId) {
-        return prefix + sensorId + path;
+    public String getPath(SensorId sensorId) {
+        return prefix + sensorId.getFullPath() + path;
     }
 
     @Override
     public String toString() {
-        return getPath("sensorId");
+        return prefix + "/sensorId" + path;
     }
 }

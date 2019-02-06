@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -32,9 +32,4 @@ public class HandlerConfiguration {
      * The object id. This is comparable to a Homie Device.
      */
     public String objectid = "";
-    /**
-     * A device can have multiple instances of a component.
-     * The node id identifies the instance, but is optional if there's one component of a type only.
-     */
-    public String nodeid = "";
 }

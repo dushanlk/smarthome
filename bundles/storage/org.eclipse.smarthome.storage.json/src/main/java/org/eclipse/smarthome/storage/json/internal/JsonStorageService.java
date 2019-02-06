@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,6 +22,9 @@ import org.eclipse.smarthome.config.core.ConfigConstants;
 import org.eclipse.smarthome.core.storage.Storage;
 import org.eclipse.smarthome.core.storage.StorageService;
 import org.osgi.service.component.ComponentContext;
+import org.osgi.service.component.annotations.Activate;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Deactivate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,6 +34,12 @@ import org.slf4j.LoggerFactory;
  *
  * @author Chris Jackson - Initial Contribution
  */
+@Component(name = "org.eclipse.smarthome.storage.json", immediate = true, property = { //
+        "service.pid=org.eclipse.smarthome.storage.json", //
+        "service.config.description.uri=system:json_storage", //
+        "service.config.label=Json Storage", //
+        "service.config.category=system", //
+        "storage.format=json" })
 public class JsonStorageService implements StorageService {
 
     private static final int MAX_FILENAME_LENGTH = 127;
@@ -50,6 +59,7 @@ public class JsonStorageService implements StorageService {
 
     private final Map<String, JsonStorage<Object>> storageList = new HashMap<String, JsonStorage<Object>>();
 
+    @Activate
     protected void activate(ComponentContext cContext, Map<String, Object> properties) {
         dbFolderName = ConfigConstants.getUserDataFolder() + File.separator + dbFolderName;
         File folder = new File(dbFolderName);
@@ -92,10 +102,11 @@ public class JsonStorageService implements StorageService {
         }
     }
 
+    @Deactivate
     protected void deactivate() {
         // Since we're using a delayed commit, we need to write out any data
         for (JsonStorage<Object> storage : storageList.values()) {
-            storage.commitDatabase();
+            storage.flush();
         }
         logger.debug("Json Storage Service: Deactivated.");
     }
@@ -116,7 +127,7 @@ public class JsonStorageService implements StorageService {
 
         JsonStorage<Object> oldStorage = storageList.put(name, (JsonStorage<Object>) newStorage);
         if (oldStorage != null) {
-            oldStorage.commitDatabase();
+            oldStorage.flush();
         }
         return newStorage;
     }
